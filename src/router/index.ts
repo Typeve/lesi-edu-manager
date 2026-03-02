@@ -8,7 +8,8 @@ const router = createRouter({
     { path: "/", redirect: "/teacher/students" },
     { path: "/teacher/students", component: TeacherStudentsPage },
     { path: "/teacher/class-overview", component: () => import("../pages/TeacherClassOverviewPage.vue") },
-    { path: "/teacher/students/:studentId", component: TeacherStudentDetailPage }
+    { path: "/teacher/students/:studentId", component: TeacherStudentDetailPage },
+    { path: "/teacher/dashboard", component: () => import("../pages/TeacherDashboardPage.vue") }
   ]
 });
 
