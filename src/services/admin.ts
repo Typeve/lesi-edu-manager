@@ -1,5 +1,15 @@
 import { requestJson } from "./http";
 
+export type GrantType = "class" | "student";
+export type AccessLevel = "read" | "manage";
+
+export interface AuthorizationGrantPayload {
+  grantType: GrantType;
+  teacherId: string;
+  targetId: number;
+  accessLevel?: AccessLevel;
+}
+
 export const adminApi = {
   createCollege(adminKey: string, payload: { schoolId: number; name: string }) {
     return requestJson<{ collegeId: number }>("/admin/org/colleges", {
@@ -57,6 +67,46 @@ export const adminApi = {
         "content-type": "application/json"
       },
       body: JSON.stringify({ newPassword })
+    });
+  },
+  assignGrant(adminKey: string, payload: AuthorizationGrantPayload) {
+    return requestJson<{ message: string }>("/admin/authorizations/grants", {
+      method: "POST",
+      headers: {
+        "x-admin-key": adminKey,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+  },
+  revokeGrant(adminKey: string, payload: AuthorizationGrantPayload) {
+    return requestJson<{ message: string }>("/admin/authorizations/grants", {
+      method: "DELETE",
+      headers: {
+        "x-admin-key": adminKey,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+  },
+  assignGrantBatch(adminKey: string, grants: AuthorizationGrantPayload[]) {
+    return requestJson<{ message: string; count: number }>("/admin/authorizations/grants/batch", {
+      method: "POST",
+      headers: {
+        "x-admin-key": adminKey,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({ grants })
+    });
+  },
+  revokeGrantBatch(adminKey: string, grants: AuthorizationGrantPayload[]) {
+    return requestJson<{ message: string; count: number }>("/admin/authorizations/grants/batch", {
+      method: "DELETE",
+      headers: {
+        "x-admin-key": adminKey,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({ grants })
     });
   }
 };

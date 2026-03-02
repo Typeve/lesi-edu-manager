@@ -6,6 +6,7 @@
         <RouterLink class="rounded bg-slate-100 px-2 py-1" to="/teacher/class-overview">班级视图</RouterLink>
         <RouterLink class="rounded bg-slate-100 px-2 py-1" to="/teacher/dashboard">教师驾驶舱</RouterLink>
         <RouterLink class="rounded bg-slate-100 px-2 py-1" to="/admin/org-teachers">组织与账号</RouterLink>
+        <RouterLink class="rounded bg-slate-100 px-2 py-1" to="/admin/authorizations">授权中心</RouterLink>
       </nav>
       <p class="text-xs uppercase tracking-[0.2em] text-slate-500">LESI EDU MANAGER</p>
       <h1 class="mt-1 text-lg font-bold text-slate-900">管理端 / 教师端</h1>
