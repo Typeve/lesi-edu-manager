@@ -4,16 +4,21 @@ const STORAGE_KEY = "lesi_manager_session";
 
 interface SessionState {
   teacherId: string;
+  adminKey: string;
 }
 
 const read = (): SessionState => {
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return { teacherId: "" };
+  if (!raw) return { teacherId: "", adminKey: "" };
+
   try {
     const parsed = JSON.parse(raw) as SessionState;
-    return { teacherId: parsed.teacherId || "" };
+    return {
+      teacherId: parsed.teacherId || "",
+      adminKey: parsed.adminKey || ""
+    };
   } catch {
-    return { teacherId: "" };
+    return { teacherId: "", adminKey: "" };
   }
 };
 
@@ -27,6 +32,10 @@ export const useSessionStore = () => ({
   state,
   setTeacherId(value: string) {
     state.teacherId = value.trim();
+    persist();
+  },
+  setAdminKey(value: string) {
+    state.adminKey = value.trim();
     persist();
   }
 });
