@@ -13,7 +13,8 @@ const router = createRouter({
     { path: "/teacher/activities", component: () => import("../pages/TeacherActivitiesPage.vue") },
     { path: "/admin/org-teachers", component: () => import("../pages/AdminOrgTeacherPage.vue") },
     { path: "/admin/authorizations", component: () => import("../pages/AdminAuthorizationPage.vue") },
-    { path: "/admin/activities-center", component: () => import("../pages/AdminActivityCenterPage.vue") }
+    { path: "/admin/activities-center", component: () => import("../pages/AdminActivityCenterPage.vue") },
+    { path: "/admin/dashboard-cockpit", component: () => import("../pages/AdminDashboardPage.vue") }
   ]
 });
 

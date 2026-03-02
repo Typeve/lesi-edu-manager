@@ -34,6 +34,79 @@ export interface ActivityItem extends PublishActivityPayload {
   status: "draft" | "published" | "closed";
 }
 
+export type DashboardDimension = "college" | "major" | "class";
+
+export interface DashboardCockpitFilters {
+  dimension: DashboardDimension;
+  schoolId?: number;
+  collegeId?: number;
+  majorId?: number;
+  classId?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface DashboardCockpitResponse {
+  dictionaryVersion: string;
+  filters: Record<string, number | undefined>;
+  overview: {
+    activatedStudentsCount: number;
+    assessmentCompletionRate: number;
+    reportGenerationRate: number;
+    taskCompletionRate: number;
+    activityParticipationRate: number;
+  };
+  byDimension: {
+    dimension: DashboardDimension;
+    barChart: {
+      categories: string[];
+      series: Array<{ code: string; name: string; values: number[] }>;
+    };
+    stackedBarChart: {
+      categories: string[];
+      series: Array<{ direction: string; values: number[] }>;
+    };
+  };
+  trendFunnel: {
+    dateRange: { startDate: string; endDate: string };
+    trend: Array<{
+      date: string;
+      activatedStudentsCount: number;
+      assessmentCompletedStudentsCount: number;
+      reportGeneratedStudentsCount: number;
+      taskCompletedStudentsCount: number;
+      activityParticipatedStudentsCount: number;
+    }>;
+    funnel: Array<{
+      stageCode: string;
+      stageName: string;
+      count: number;
+      conversionRate: number;
+    }>;
+  };
+}
+
+const toQuery = (filters: DashboardCockpitFilters): string => {
+  const query = new URLSearchParams();
+  query.set("dimension", filters.dimension);
+
+  ([
+    "schoolId",
+    "collegeId",
+    "majorId",
+    "classId",
+    "startDate",
+    "endDate"
+  ] as const).forEach((key) => {
+    const value = filters[key];
+    if (value !== undefined && value !== null && value !== "") {
+      query.set(key, String(value));
+    }
+  });
+
+  return query.toString();
+};
+
 export const adminApi = {
   createCollege(adminKey: string, payload: { schoolId: number; name: string }) {
     return requestJson<{ collegeId: number }>("/admin/org/colleges", {
@@ -145,6 +218,14 @@ export const adminApi = {
   },
   listActivities(adminKey: string) {
     return requestJson<{ items: ActivityItem[] }>("/admin/activities", {
+      headers: {
+        "x-admin-key": adminKey
+      }
+    });
+  },
+  getDashboardCockpit(adminKey: string, filters: DashboardCockpitFilters) {
+    const query = toQuery(filters);
+    return requestJson<DashboardCockpitResponse>(`/admin/dashboard/cockpit?${query}`, {
       headers: {
         "x-admin-key": adminKey
       }
