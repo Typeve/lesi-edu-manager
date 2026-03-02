@@ -10,6 +10,30 @@ export interface AuthorizationGrantPayload {
   accessLevel?: AccessLevel;
 }
 
+export type ActivityType = "course" | "competition" | "project";
+export type ActivityScopeType = "school" | "college" | "class";
+
+export interface ActivityTimelineNode {
+  key: string;
+  at: string;
+}
+
+export interface PublishActivityPayload {
+  activityType: ActivityType;
+  title: string;
+  scopeType: ActivityScopeType;
+  scopeTargetId: number;
+  ownerTeacherId: string;
+  startAt: string;
+  endAt: string;
+  timelineNodes: ActivityTimelineNode[];
+}
+
+export interface ActivityItem extends PublishActivityPayload {
+  activityId: number;
+  status: "draft" | "published" | "closed";
+}
+
 export const adminApi = {
   createCollege(adminKey: string, payload: { schoolId: number; name: string }) {
     return requestJson<{ collegeId: number }>("/admin/org/colleges", {
@@ -107,6 +131,23 @@ export const adminApi = {
         "content-type": "application/json"
       },
       body: JSON.stringify({ grants })
+    });
+  },
+  publishActivity(adminKey: string, payload: PublishActivityPayload) {
+    return requestJson<{ message: string }>("/admin/activities", {
+      method: "POST",
+      headers: {
+        "x-admin-key": adminKey,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+  },
+  listActivities(adminKey: string) {
+    return requestJson<{ items: ActivityItem[] }>("/admin/activities", {
+      headers: {
+        "x-admin-key": adminKey
+      }
     });
   }
 };
