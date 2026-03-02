@@ -9,7 +9,8 @@ const router = createRouter({
     { path: "/teacher/students", component: TeacherStudentsPage },
     { path: "/teacher/class-overview", component: () => import("../pages/TeacherClassOverviewPage.vue") },
     { path: "/teacher/students/:studentId", component: TeacherStudentDetailPage },
-    { path: "/teacher/dashboard", component: () => import("../pages/TeacherDashboardPage.vue") }
+    { path: "/teacher/dashboard", component: () => import("../pages/TeacherDashboardPage.vue") },
+    { path: "/admin/org-teachers", component: () => import("../pages/AdminOrgTeacherPage.vue") }
   ]
 });
 
