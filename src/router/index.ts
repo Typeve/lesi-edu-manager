@@ -7,6 +7,7 @@ const router = createRouter({
   routes: [
     { path: "/", redirect: "/teacher/students" },
     { path: "/teacher/students", component: TeacherStudentsPage },
+    { path: "/teacher/class-overview", component: () => import("../pages/TeacherClassOverviewPage.vue") },
     { path: "/teacher/students/:studentId", component: TeacherStudentDetailPage }
   ]
 });
