@@ -1,18 +1,13 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { computed, reactive, ref } from "vue";
 import { adminApi, type AccessLevel, type AuthorizationGrantPayload, type GrantType } from "../services/admin";
 import { ApiError } from "../services/http";
-import { teacherApi } from "../services/teacher";
-import { useSessionStore } from "../stores/session";
-import type { TeacherStudentItem } from "../types/teacher";
 
 interface ScopeSnapshot extends AuthorizationGrantPayload {
   updatedAt: string;
 }
 
 const STORAGE_KEY = "lesi_manager_scope_snapshot";
-
-const session = useSessionStore();
 
 const form = reactive({
   teacherId: "",
@@ -23,9 +18,6 @@ const form = reactive({
 
 const batchText = ref("class,101,read\nstudent,1001,manage");
 const feedback = ref("");
-const loadingPreview = ref(false);
-const previewTotal = ref(0);
-const previewItems = ref<TeacherStudentItem[]>([]);
 
 const scopes = ref<ScopeSnapshot[]>(readSnapshot());
 
@@ -53,10 +45,6 @@ const teacherScopes = computed(() => {
 });
 
 const ensureReady = () => {
-  if (!session.state.adminKey) {
-    feedback.value = "请先输入管理员Key";
-    return false;
-  }
   if (!form.teacherId.trim()) {
     feedback.value = "请先输入教师ID";
     return false;
@@ -92,26 +80,6 @@ const handleError = (error: unknown) => {
   feedback.value = error instanceof ApiError ? error.message : "操作失败";
 };
 
-const refreshPreview = async () => {
-  if (!form.teacherId.trim()) {
-    previewItems.value = [];
-    previewTotal.value = 0;
-    return;
-  }
-
-  loadingPreview.value = true;
-  try {
-    const result = await teacherApi.getStudents(form.teacherId.trim(), { page: 1, pageSize: 20 });
-    previewItems.value = result.items;
-    previewTotal.value = result.total;
-  } catch {
-    previewItems.value = [];
-    previewTotal.value = 0;
-  } finally {
-    loadingPreview.value = false;
-  }
-};
-
 const submitSingle = async (mode: "assign" | "revoke") => {
   if (!ensureReady()) return;
   if (!Number.isInteger(form.targetId) || form.targetId <= 0) {
@@ -130,16 +98,14 @@ const submitSingle = async (mode: "assign" | "revoke") => {
 
   try {
     if (mode === "assign") {
-      await adminApi.assignGrant(session.state.adminKey, payload);
+      await adminApi.assignGrant(payload);
       upsertSnapshot(payload);
-      feedback.value = "授权已分配，并已实时刷新列表";
+      feedback.value = "授权已分配";
     } else {
-      await adminApi.revokeGrant(session.state.adminKey, payload);
+      await adminApi.revokeGrant(payload);
       removeSnapshot(payload);
-      feedback.value = "授权已撤销，并已实时刷新列表";
+      feedback.value = "授权已撤销";
     }
-
-    await refreshPreview();
   } catch (error) {
     handleError(error);
   }
@@ -177,43 +143,26 @@ const submitBatch = async (mode: "assign" | "revoke") => {
 
   try {
     if (mode === "assign") {
-      await adminApi.assignGrantBatch(session.state.adminKey, grants);
+      await adminApi.assignGrantBatch(grants);
       grants.forEach(upsertSnapshot);
-      feedback.value = `已批量分配 ${grants.length} 条授权，并实时刷新列表`;
+      feedback.value = `已批量分配 ${grants.length} 条授权`;
     } else {
-      await adminApi.revokeGrantBatch(session.state.adminKey, grants);
+      await adminApi.revokeGrantBatch(grants);
       grants.forEach(removeSnapshot);
-      feedback.value = `已批量撤销 ${grants.length} 条授权，并实时刷新列表`;
+      feedback.value = `已批量撤销 ${grants.length} 条授权`;
     }
-
-    await refreshPreview();
   } catch (error) {
     handleError(error);
   }
 };
-
-watch(
-  () => form.teacherId,
-  async () => {
-    await refreshPreview();
-  }
-);
 </script>
 
 <template>
   <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow">
     <h1 class="text-xl font-bold text-slate-900">管理员｜授权中心</h1>
-    <p class="text-sm text-slate-600">按教师查看授权范围，支持单条/批量分配与撤销，操作后立即刷新。</p>
+    <p class="text-sm text-slate-600">按教师维护授权范围，支持单条/批量分配与撤销。</p>
 
-    <div class="grid gap-2 md:grid-cols-2">
-      <input
-        :value="session.state.adminKey"
-        @input="session.setAdminKey(($event.target as HTMLInputElement).value)"
-        class="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-        placeholder="输入管理员Key"
-      />
-      <input v-model="form.teacherId" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="输入教师ID（如 T-1）" />
-    </div>
+    <input v-model="form.teacherId" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="输入教师ID（如 T-1）" />
 
     <section class="rounded-xl border border-slate-200 p-4">
       <h2 class="text-sm font-semibold">单条授权</h2>
@@ -252,19 +201,6 @@ watch(
         </li>
       </ul>
       <p v-if="!teacherScopes.length" class="mt-2 text-xs text-slate-500">暂无快照（可先执行分配/撤销）。</p>
-    </section>
-
-    <section class="rounded-xl border border-slate-200 p-4">
-      <h2 class="text-sm font-semibold">教师可见学生预览（用于校验授权变更）</h2>
-      <p v-if="loadingPreview" class="mt-2 text-sm text-slate-500">加载中...</p>
-      <template v-else>
-        <p class="mt-2 text-xs text-slate-500">当前总数：{{ previewTotal }}</p>
-        <ul class="mt-2 space-y-1 text-xs">
-          <li v-for="item in previewItems" :key="item.studentId" class="rounded border border-slate-100 px-2 py-1">
-            {{ item.studentNo }}｜{{ item.name }}｜班级 {{ item.classId }}｜{{ item.assessmentDone ? '测评完成' : '测评未完成' }}
-          </li>
-        </ul>
-      </template>
     </section>
 
     <p v-if="feedback" class="text-sm text-brand-700">{{ feedback }}</p>

@@ -3,11 +3,9 @@ import { computed, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { ApiError } from "../services/http";
 import { teacherApi } from "../services/teacher";
-import { useSessionStore } from "../stores/session";
 import type { TeacherStudentItem } from "../types/teacher";
 
 const router = useRouter();
-const session = useSessionStore();
 
 const options = reactive({
   thresholdDays: 30,
@@ -18,18 +16,11 @@ const loading = ref(false);
 const errorText = ref("");
 const students = ref<TeacherStudentItem[]>([]);
 
-const hasTeacherId = computed(() => session.state.teacherId.trim().length > 0);
-
 const load = async () => {
-  if (!hasTeacherId.value) {
-    students.value = [];
-    return;
-  }
-
   loading.value = true;
   errorText.value = "";
   try {
-    const result = await teacherApi.getStudents(session.state.teacherId, {
+    const result = await teacherApi.getStudents({
       classId: options.classId ? Number(options.classId) : undefined,
       page: 1,
       pageSize: 100
@@ -37,12 +28,13 @@ const load = async () => {
     students.value = result.items;
   } catch (error) {
     errorText.value = error instanceof ApiError ? error.message : "加载失败";
+    students.value = [];
   } finally {
     loading.value = false;
   }
 };
 
-watch(() => [session.state.teacherId, options.classId], load, { immediate: true });
+watch(() => [options.classId], load, { immediate: true });
 
 const rows = computed(() =>
   students.value.map((item) => ({
@@ -70,19 +62,12 @@ const goDetail = (studentId: number) => router.push(`/teacher/students/${student
     <h1 class="text-xl font-bold text-slate-900">教师端｜班级视图与异常名单</h1>
     <p class="mt-2 text-sm text-slate-600">默认异常阈值 30 天，可配置并查看异常学生名单。</p>
 
-    <div class="mt-4 grid gap-2 md:grid-cols-3">
-      <input
-        :value="session.state.teacherId"
-        @input="session.setTeacherId(($event.target as HTMLInputElement).value)"
-        class="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-        placeholder="教师ID"
-      />
+    <div class="mt-4 grid gap-2 md:grid-cols-2">
       <input v-model="options.classId" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="班级ID(可选)" />
       <input v-model.number="options.thresholdDays" type="number" min="1" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="异常阈值天数" />
     </div>
 
-    <p v-if="!hasTeacherId" class="mt-4 text-sm text-amber-700">请先输入教师ID。</p>
-    <p v-else-if="loading" class="mt-4 text-sm text-slate-500">加载中...</p>
+    <p v-if="loading" class="mt-4 text-sm text-slate-500">加载中...</p>
     <p v-else-if="errorText" class="mt-4 text-sm text-rose-600">{{ errorText }}</p>
 
     <template v-else>

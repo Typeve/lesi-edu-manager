@@ -2,9 +2,6 @@
 import { reactive, ref } from "vue";
 import { adminApi } from "../services/admin";
 import { ApiError } from "../services/http";
-import { useSessionStore } from "../stores/session";
-
-const session = useSessionStore();
 
 const collegeForm = reactive({ schoolId: 1, name: "" });
 const teacherForm = reactive({ name: "", account: "", password: "", status: "active" as "active" | "frozen" });
@@ -17,18 +14,9 @@ const handleError = (error: unknown) => {
   feedback.value = error instanceof ApiError ? error.message : "操作失败";
 };
 
-const ensureAdminKey = () => {
-  if (!session.state.adminKey) {
-    feedback.value = "请先输入管理员Key";
-    return false;
-  }
-  return true;
-};
-
 const createCollege = async () => {
-  if (!ensureAdminKey()) return;
   try {
-    const created = await adminApi.createCollege(session.state.adminKey, {
+    const created = await adminApi.createCollege({
       schoolId: Number(collegeForm.schoolId),
       name: collegeForm.name
     });
@@ -41,14 +29,13 @@ const createCollege = async () => {
 };
 
 const renameCollege = async (collegeId: number) => {
-  if (!ensureAdminKey()) return;
   const nextName = prompt("请输入新学院名称");
   if (!nextName) return;
 
   if (!confirm(`确认将学院改名为 ${nextName} 吗？`)) return;
 
   try {
-    await adminApi.updateCollege(session.state.adminKey, collegeId, { name: nextName });
+    await adminApi.updateCollege(collegeId, { name: nextName });
     colleges.value = colleges.value.map((item) => (item.collegeId === collegeId ? { ...item, name: nextName } : item));
     feedback.value = "组织树更新成功（已重命名）";
   } catch (error) {
@@ -57,11 +44,10 @@ const renameCollege = async (collegeId: number) => {
 };
 
 const removeCollege = async (collegeId: number) => {
-  if (!ensureAdminKey()) return;
   if (!confirm("确认删除该学院吗？此操作不可恢复。")) return;
 
   try {
-    await adminApi.deleteCollege(session.state.adminKey, collegeId);
+    await adminApi.deleteCollege(collegeId);
     colleges.value = colleges.value.filter((item) => item.collegeId !== collegeId);
     feedback.value = "组织树更新成功（已删除）";
   } catch (error) {
@@ -70,9 +56,8 @@ const removeCollege = async (collegeId: number) => {
 };
 
 const createTeacher = async () => {
-  if (!ensureAdminKey()) return;
   try {
-    const created = await adminApi.createTeacher(session.state.adminKey, teacherForm);
+    const created = await adminApi.createTeacher(teacherForm);
     teachers.value.push({
       teacherId: created.teacherId,
       name: teacherForm.name,
@@ -89,12 +74,11 @@ const createTeacher = async () => {
 };
 
 const toggleTeacherStatus = async (teacherId: string, status: "active" | "frozen") => {
-  if (!ensureAdminKey()) return;
   const nextStatus = status === "active" ? "frozen" : "active";
   if (!confirm(`确认将账号状态改为 ${nextStatus} 吗？`)) return;
 
   try {
-    await adminApi.updateTeacherStatus(session.state.adminKey, teacherId, nextStatus);
+    await adminApi.updateTeacherStatus(teacherId, nextStatus);
     teachers.value = teachers.value.map((item) => (item.teacherId === teacherId ? { ...item, status: nextStatus } : item));
     feedback.value = "教师账号操作已即时生效";
   } catch (error) {
@@ -103,13 +87,12 @@ const toggleTeacherStatus = async (teacherId: string, status: "active" | "frozen
 };
 
 const resetTeacherPassword = async (teacherId: string) => {
-  if (!ensureAdminKey()) return;
   const newPassword = prompt("请输入新密码（至少8位）");
   if (!newPassword) return;
   if (!confirm("确认重置该教师密码吗？")) return;
 
   try {
-    await adminApi.resetTeacherPassword(session.state.adminKey, teacherId, newPassword);
+    await adminApi.resetTeacherPassword(teacherId, newPassword);
     feedback.value = "已完成密码重置";
   } catch (error) {
     handleError(error);
@@ -120,13 +103,6 @@ const resetTeacherPassword = async (teacherId: string) => {
 <template>
   <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow">
     <h1 class="text-xl font-bold text-slate-900">管理员｜组织与教师账号管理</h1>
-
-    <input
-      :value="session.state.adminKey"
-      @input="session.setAdminKey(($event.target as HTMLInputElement).value)"
-      class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-      placeholder="输入管理员Key"
-    />
 
     <section class="rounded-xl border border-slate-200 p-4">
       <h2 class="text-sm font-semibold">组织树维护</h2>
