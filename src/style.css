@@ -1,18 +1,23 @@
 @import "tailwindcss";
 
-@theme {
-  --color-brand-500: #0b7285;
-  --color-brand-700: #094c58;
-}
-
 :root {
-  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color-scheme: light;
+  --el-color-primary: #409eff;
+  --el-color-primary-light-3: #79bbff;
+  --el-color-primary-light-5: #a0cfff;
+  --el-color-primary-light-7: #c6e2ff;
+  --el-color-primary-light-8: #d9ecff;
+  --el-color-primary-light-9: #ecf5ff;
+  --el-color-primary-dark-2: #337ecc;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at top left, #e6fcf5 0%, #f8fbff 40%, #ffffff 100%);
-  color: #0f172a;
+  background-color: var(--el-bg-color-page);
+  color: var(--el-text-color-primary);
 }
 
+#app {
+  min-height: 100vh;
+}
