@@ -2,7 +2,7 @@ import { reactive } from "vue";
 
 const STORAGE_KEY = "lesi_manager_session";
 
-interface SessionState {
+export interface SessionState {
   teacherId: string;
   adminKey: string;
 }
@@ -36,6 +36,19 @@ export const useSessionStore = () => ({
   },
   setAdminKey(value: string) {
     state.adminKey = value.trim();
+    persist();
+  },
+  clearTeacherId() {
+    state.teacherId = "";
+    persist();
+  },
+  clearAdminKey() {
+    state.adminKey = "";
+    persist();
+  },
+  clearAll() {
+    state.teacherId = "";
+    state.adminKey = "";
     persist();
   }
 });
