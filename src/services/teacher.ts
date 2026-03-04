@@ -22,19 +22,11 @@ const toQuery = (filters: TeacherStudentsFilters): string => {
 };
 
 export const teacherApi = {
-  getStudents(teacherId: string, filters: TeacherStudentsFilters) {
+  getStudents(filters: TeacherStudentsFilters) {
     const query = toQuery(filters);
-    return requestJson<TeacherStudentsResponse>(`/teacher/my-students${query ? `?${query}` : ""}`, {
-      headers: {
-        "x-teacher-id": teacherId
-      }
-    });
+    return requestJson<TeacherStudentsResponse>(`/teacher/my-students${query ? `?${query}` : ""}`);
   },
-  getStudentDetail(teacherId: string, studentId: number) {
-    return requestJson<TeacherStudentDetailResponse>(`/teacher/students/${studentId}/detail`, {
-      headers: {
-        "x-teacher-id": teacherId
-      }
-    });
+  getStudentDetail(studentId: number) {
+    return requestJson<TeacherStudentDetailResponse>(`/teacher/students/${studentId}/detail`);
   }
 };

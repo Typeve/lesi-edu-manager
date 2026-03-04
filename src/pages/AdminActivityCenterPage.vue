@@ -2,11 +2,8 @@
 import { onMounted, reactive, ref } from "vue";
 import { adminApi, type ActivityItem, type ActivityScopeType, type ActivityType } from "../services/admin";
 import { ApiError } from "../services/http";
-import { useSessionStore } from "../stores/session";
 
 const SNAPSHOT_KEY = "lesi_manager_activities_snapshot";
-
-const session = useSessionStore();
 
 const form = reactive({
   activityType: "course" as ActivityType,
@@ -35,24 +32,15 @@ const parseTimeline = () => {
     .filter((item) => item.key && item.at);
 };
 
-const ensureAdminKey = () => {
-  if (!session.state.adminKey) {
-    feedback.value = "请先输入管理员Key";
-    return false;
-  }
-  return true;
-};
-
 const syncSnapshot = () => {
   localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(activities.value));
 };
 
 const loadActivities = async () => {
-  if (!ensureAdminKey()) return;
   loading.value = true;
   feedback.value = "";
   try {
-    const result = await adminApi.listActivities(session.state.adminKey);
+    const result = await adminApi.listActivities();
     activities.value = result.items;
     syncSnapshot();
   } catch (error) {
@@ -63,7 +51,6 @@ const loadActivities = async () => {
 };
 
 const publish = async () => {
-  if (!ensureAdminKey()) return;
   if (!form.title.trim() || !form.ownerTeacherId.trim() || !form.startAt || !form.endAt || form.scopeTargetId <= 0) {
     feedback.value = "请完整填写活动信息";
     return;
@@ -78,7 +65,7 @@ const publish = async () => {
   if (!confirm("确认发布该活动吗？")) return;
 
   try {
-    await adminApi.publishActivity(session.state.adminKey, {
+    await adminApi.publishActivity({
       activityType: form.activityType,
       title: form.title.trim(),
       scopeType: form.scopeType,
@@ -106,13 +93,6 @@ onMounted(async () => {
   <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow">
     <h1 class="text-xl font-bold text-slate-900">管理员｜活动中心</h1>
     <p class="text-sm text-slate-600">创建课程/竞赛/项目活动，配置范围和负责人，发布后同步到教师端预览。</p>
-
-    <input
-      :value="session.state.adminKey"
-      @input="session.setAdminKey(($event.target as HTMLInputElement).value)"
-      class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-      placeholder="输入管理员Key"
-    />
 
     <section class="rounded-xl border border-slate-200 p-4">
       <h2 class="text-sm font-semibold">发布活动</h2>

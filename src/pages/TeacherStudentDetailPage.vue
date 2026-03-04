@@ -3,12 +3,10 @@ import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ApiError } from "../services/http";
 import { teacherApi } from "../services/teacher";
-import { useSessionStore } from "../stores/session";
 import type { TeacherStudentDetailResponse } from "../types/teacher";
 
 const route = useRoute();
 const router = useRouter();
-const session = useSessionStore();
 
 const loading = ref(true);
 const errorText = ref("");
@@ -17,14 +15,14 @@ const detail = ref<TeacherStudentDetailResponse | null>(null);
 onMounted(async () => {
   loading.value = true;
   const studentId = Number(route.params.studentId);
-  if (!session.state.teacherId || !Number.isInteger(studentId) || studentId <= 0) {
-    errorText.value = "缺少教师ID或学生ID无效";
+  if (!Number.isInteger(studentId) || studentId <= 0) {
+    errorText.value = "学生ID无效";
     loading.value = false;
     return;
   }
 
   try {
-    detail.value = await teacherApi.getStudentDetail(session.state.teacherId, studentId);
+    detail.value = await teacherApi.getStudentDetail(studentId);
   } catch (error) {
     errorText.value = error instanceof ApiError ? error.message : "详情加载失败";
   } finally {

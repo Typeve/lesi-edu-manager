@@ -2,9 +2,6 @@
 import { reactive, ref, watch } from "vue";
 import { adminApi, type DashboardCockpitResponse, type DashboardDimension } from "../services/admin";
 import { ApiError } from "../services/http";
-import { useSessionStore } from "../stores/session";
-
-const session = useSessionStore();
 
 const filters = reactive({
   dimension: "class" as DashboardDimension,
@@ -27,17 +24,11 @@ const toNumberOrUndefined = (raw: string): number | undefined => {
 };
 
 const load = async () => {
-  if (!session.state.adminKey) {
-    data.value = null;
-    errorText.value = "请先输入管理员Key";
-    return;
-  }
-
   loading.value = true;
   errorText.value = "";
 
   try {
-    data.value = await adminApi.getDashboardCockpit(session.state.adminKey, {
+    data.value = await adminApi.getDashboardCockpit({
       dimension: filters.dimension,
       schoolId: toNumberOrUndefined(filters.schoolId),
       collegeId: toNumberOrUndefined(filters.collegeId),
@@ -55,16 +46,7 @@ const load = async () => {
 };
 
 watch(
-  () => [
-    session.state.adminKey,
-    filters.dimension,
-    filters.schoolId,
-    filters.collegeId,
-    filters.majorId,
-    filters.classId,
-    filters.startDate,
-    filters.endDate
-  ],
+  () => [filters.dimension, filters.schoolId, filters.collegeId, filters.majorId, filters.classId, filters.startDate, filters.endDate],
   async () => {
     await load();
   },
@@ -78,12 +60,6 @@ watch(
     <p class="text-sm text-slate-600">指标卡 + 柱状图 + 堆叠柱 + 30天趋势折线 + 漏斗图，筛选联动刷新。</p>
 
     <div class="grid gap-2 md:grid-cols-4">
-      <input
-        :value="session.state.adminKey"
-        @input="session.setAdminKey(($event.target as HTMLInputElement).value)"
-        class="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-        placeholder="管理员Key"
-      />
       <select v-model="filters.dimension" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
         <option value="class">class</option>
         <option value="major">major</option>

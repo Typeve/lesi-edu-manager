@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { teacherApi } from "../services/teacher";
 import { ApiError } from "../services/http";
-import { useSessionStore } from "../stores/session";
 import type { TeacherStudentItem } from "../types/teacher";
 
 const router = useRouter();
-const session = useSessionStore();
 
 const filters = reactive({
   classId: "",
@@ -24,19 +22,11 @@ const errorText = ref("");
 const items = ref<TeacherStudentItem[]>([]);
 const total = ref(0);
 
-const hasTeacherId = computed(() => session.state.teacherId.trim().length > 0);
-
 const load = async () => {
-  if (!hasTeacherId.value) {
-    items.value = [];
-    total.value = 0;
-    return;
-  }
-
   loading.value = true;
   errorText.value = "";
   try {
-    const result = await teacherApi.getStudents(session.state.teacherId, {
+    const result = await teacherApi.getStudents({
       classId: filters.classId ? Number(filters.classId) : undefined,
       majorId: filters.majorId ? Number(filters.majorId) : undefined,
       grade: filters.grade ? Number(filters.grade) : undefined,
@@ -50,13 +40,15 @@ const load = async () => {
     total.value = result.total;
   } catch (error) {
     errorText.value = error instanceof ApiError ? error.message : "加载失败";
+    items.value = [];
+    total.value = 0;
   } finally {
     loading.value = false;
   }
 };
 
 watch(
-  () => [session.state.teacherId, filters.classId, filters.majorId, filters.grade, filters.assessmentStatus, filters.reportStatus, filters.page],
+  () => [filters.classId, filters.majorId, filters.grade, filters.assessmentStatus, filters.reportStatus, filters.page],
   async () => {
     await load();
   },
@@ -74,12 +66,6 @@ const goDetail = (studentId: number) => {
     <p class="mt-2 text-sm text-slate-600">按班级/专业/年级/测评状态/报告状态筛选，仅展示有权限学生。</p>
 
     <div class="mt-4 grid gap-2 md:grid-cols-3">
-      <input
-        :value="session.state.teacherId"
-        @input="session.setTeacherId(($event.target as HTMLInputElement).value)"
-        class="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-        placeholder="输入教师ID（如 T-1）"
-      />
       <input v-model="filters.classId" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="班级ID" />
       <input v-model="filters.majorId" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="专业ID" />
       <input v-model="filters.grade" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="年级" />
@@ -95,8 +81,7 @@ const goDetail = (studentId: number) => {
       </select>
     </div>
 
-    <p v-if="!hasTeacherId" class="mt-4 text-sm text-amber-700">请先输入教师ID。</p>
-    <p v-else-if="loading" class="mt-4 text-sm text-slate-500">加载中...</p>
+    <p v-if="loading" class="mt-4 text-sm text-slate-500">加载中...</p>
     <p v-else-if="errorText" class="mt-4 text-sm text-rose-600">{{ errorText }}</p>
 
     <div v-else class="mt-5 overflow-x-auto">
