@@ -1,7 +1,19 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { adminApi, type DashboardCockpitResponse, type DashboardDimension } from "../services/admin";
 import { ApiError } from "../services/http";
+import { useSessionStore } from "../stores/session";
+
+interface TrendRow {
+  date: string;
+  activatedStudentsCount: number;
+  assessmentCompletedStudentsCount: number;
+  reportGeneratedStudentsCount: number;
+  taskCompletedStudentsCount: number;
+  activityParticipatedStudentsCount: number;
+}
+
+const session = useSessionStore();
 
 const filters = reactive({
   dimension: "class" as DashboardDimension,
@@ -16,6 +28,30 @@ const filters = reactive({
 const loading = ref(false);
 const errorText = ref("");
 const data = ref<DashboardCockpitResponse | null>(null);
+
+const overviewRows = computed(() => {
+  if (!data.value) return [];
+  return Object.entries(data.value.overview).map(([key, value]) => ({ key, value }));
+});
+
+const barChartRows = computed(() => {
+  if (!data.value) return [];
+  return data.value.byDimension.barChart.series.map((series) => ({
+    code: series.code,
+    name: series.name,
+    values: series.values.join(" / ")
+  }));
+});
+
+const stackedRows = computed(() => {
+  if (!data.value) return [];
+  return data.value.byDimension.stackedBarChart.series.map((series) => ({
+    direction: series.direction,
+    values: series.values.join(" / ")
+  }));
+});
+
+const trendRows = computed<TrendRow[]>(() => data.value?.trendFunnel.trend ?? []);
 
 const toNumberOrUndefined = (raw: string): number | undefined => {
   if (!raw.trim()) return undefined;
@@ -55,111 +91,112 @@ watch(
 </script>
 
 <template>
-  <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow">
-    <h1 class="text-xl font-bold text-slate-900">管理员｜驾驶舱</h1>
-    <p class="text-sm text-slate-600">指标卡 + 柱状图 + 堆叠柱 + 30天趋势折线 + 漏斗图，筛选联动刷新。</p>
+  <el-card shadow="never" class="rounded-2xl border border-slate-200">
+    <template #header>
+      <div class="space-y-1">
+        <h2 class="text-xl font-bold text-slate-900">管理员｜驾驶舱</h2>
+        <p class="text-sm text-slate-600">指标卡 + 柱状图 + 堆叠柱 + 30天趋势折线 + 漏斗图，筛选联动刷新。</p>
+      </div>
+    </template>
 
-    <div class="grid gap-2 md:grid-cols-4">
-      <select v-model="filters.dimension" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-        <option value="class">class</option>
-        <option value="major">major</option>
-        <option value="college">college</option>
-      </select>
-      <input v-model="filters.startDate" type="date" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-      <input v-model="filters.endDate" type="date" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-      <input v-model="filters.schoolId" placeholder="schoolId" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-      <input v-model="filters.collegeId" placeholder="collegeId" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-      <input v-model="filters.majorId" placeholder="majorId" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-      <input v-model="filters.classId" placeholder="classId" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-    </div>
+    <el-form label-position="top">
+      <el-row :gutter="12">
+        <el-col :xs="24" :md="6">
+          <el-form-item label="管理员Key">
+            <el-input
+              :model-value="session.state.adminKey"
+              placeholder="管理员Key"
+              show-password
+              @update:model-value="session.setAdminKey"
+              clearable
+            />
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :md="6">
+          <el-form-item label="统计维度">
+            <el-select v-model="filters.dimension" class="w-full">
+              <el-option label="class" value="class" />
+              <el-option label="major" value="major" />
+              <el-option label="college" value="college" />
+            </el-select>
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :md="6">
+          <el-form-item label="开始日期">
+            <el-date-picker v-model="filters.startDate" type="date" class="!w-full" value-format="YYYY-MM-DD" />
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :md="6">
+          <el-form-item label="结束日期">
+            <el-date-picker v-model="filters.endDate" type="date" class="!w-full" value-format="YYYY-MM-DD" />
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :md="6"><el-form-item label="schoolId"><el-input v-model="filters.schoolId" clearable /></el-form-item></el-col>
+        <el-col :xs="24" :md="6"><el-form-item label="collegeId"><el-input v-model="filters.collegeId" clearable /></el-form-item></el-col>
+        <el-col :xs="24" :md="6"><el-form-item label="majorId"><el-input v-model="filters.majorId" clearable /></el-form-item></el-col>
+        <el-col :xs="24" :md="6"><el-form-item label="classId"><el-input v-model="filters.classId" clearable /></el-form-item></el-col>
+      </el-row>
+    </el-form>
 
-    <p v-if="loading" class="text-sm text-slate-500">加载中...</p>
-    <p v-else-if="errorText" class="text-sm text-rose-600">{{ errorText }}</p>
+    <el-alert v-if="errorText" :title="errorText" type="error" show-icon :closable="false" />
 
     <template v-else-if="data">
-      <section class="grid gap-3 md:grid-cols-5">
-        <article class="rounded border border-slate-200 p-3" v-for="(value, key) in data.overview" :key="key">
-          <p class="text-xs text-slate-500">{{ key }}</p>
-          <p class="mt-1 text-lg font-semibold text-slate-900">{{ value }}</p>
-        </article>
-      </section>
+      <el-row :gutter="12" class="mb-4">
+        <el-col v-for="item in overviewRows" :key="item.key" :xs="24" :md="6">
+          <el-statistic :title="item.key" :value="item.value" />
+        </el-col>
+      </el-row>
 
-      <section class="rounded-xl border border-slate-200 p-4">
-        <h2 class="text-sm font-semibold">柱状图（班级对比）</h2>
-        <div class="mt-2 overflow-x-auto text-xs">
-          <table class="min-w-full">
-            <thead>
-              <tr>
-                <th class="px-2 py-1 text-left">维度</th>
-                <th v-for="name in data.byDimension.barChart.categories" :key="name" class="px-2 py-1 text-left">{{ name }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="series in data.byDimension.barChart.series" :key="series.code">
-                <td class="px-2 py-1">{{ series.name }}</td>
-                <td v-for="(val, idx) in series.values" :key="idx" class="px-2 py-1">{{ val }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <el-row :gutter="12">
+        <el-col :xs="24" :md="12">
+          <el-card shadow="never" class="mb-3">
+            <template #header>柱状图（班级对比）</template>
+            <p class="mb-2 text-xs text-slate-500">维度：{{ data.byDimension.barChart.categories.join(" / ") }}</p>
+            <el-table :data="barChartRows" border size="small">
+              <el-table-column prop="name" label="指标" min-width="120" />
+              <el-table-column prop="values" label="数据序列" min-width="200" />
+            </el-table>
+          </el-card>
+        </el-col>
 
-      <section class="rounded-xl border border-slate-200 p-4">
-        <h2 class="text-sm font-semibold">堆叠柱（方向分布）</h2>
-        <div class="mt-2 overflow-x-auto text-xs">
-          <table class="min-w-full">
-            <thead>
-              <tr>
-                <th class="px-2 py-1 text-left">方向</th>
-                <th v-for="name in data.byDimension.stackedBarChart.categories" :key="name" class="px-2 py-1 text-left">{{ name }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="series in data.byDimension.stackedBarChart.series" :key="series.direction">
-                <td class="px-2 py-1">{{ series.direction }}</td>
-                <td v-for="(val, idx) in series.values" :key="idx" class="px-2 py-1">{{ val }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+        <el-col :xs="24" :md="12">
+          <el-card shadow="never" class="mb-3">
+            <template #header>堆叠柱（方向分布）</template>
+            <p class="mb-2 text-xs text-slate-500">维度：{{ data.byDimension.stackedBarChart.categories.join(" / ") }}</p>
+            <el-table :data="stackedRows" border size="small">
+              <el-table-column prop="direction" label="方向" min-width="120" />
+              <el-table-column prop="values" label="数据序列" min-width="200" />
+            </el-table>
+          </el-card>
+        </el-col>
 
-      <section class="rounded-xl border border-slate-200 p-4">
-        <h2 class="text-sm font-semibold">折线图（30天趋势）</h2>
-        <div class="mt-2 overflow-x-auto text-xs">
-          <table class="min-w-full">
-            <thead>
-              <tr>
-                <th class="px-2 py-1 text-left">日期</th>
-                <th class="px-2 py-1 text-left">激活</th>
-                <th class="px-2 py-1 text-left">测评</th>
-                <th class="px-2 py-1 text-left">报告</th>
-                <th class="px-2 py-1 text-left">任务</th>
-                <th class="px-2 py-1 text-left">活动</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="point in data.trendFunnel.trend" :key="point.date">
-                <td class="px-2 py-1">{{ point.date }}</td>
-                <td class="px-2 py-1">{{ point.activatedStudentsCount }}</td>
-                <td class="px-2 py-1">{{ point.assessmentCompletedStudentsCount }}</td>
-                <td class="px-2 py-1">{{ point.reportGeneratedStudentsCount }}</td>
-                <td class="px-2 py-1">{{ point.taskCompletedStudentsCount }}</td>
-                <td class="px-2 py-1">{{ point.activityParticipatedStudentsCount }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+        <el-col :xs="24" :md="12">
+          <el-card shadow="never">
+            <template #header>折线图（30天趋势）</template>
+            <el-table :data="trendRows" border size="small">
+              <el-table-column prop="date" label="日期" min-width="110" />
+              <el-table-column prop="activatedStudentsCount" label="激活" min-width="80" />
+              <el-table-column prop="assessmentCompletedStudentsCount" label="测评" min-width="80" />
+              <el-table-column prop="reportGeneratedStudentsCount" label="报告" min-width="80" />
+              <el-table-column prop="taskCompletedStudentsCount" label="任务" min-width="80" />
+              <el-table-column prop="activityParticipatedStudentsCount" label="活动" min-width="80" />
+            </el-table>
+          </el-card>
+        </el-col>
 
-      <section class="rounded-xl border border-slate-200 p-4">
-        <h2 class="text-sm font-semibold">漏斗图（转化链路）</h2>
-        <ul class="mt-2 space-y-1 text-sm">
-          <li v-for="stage in data.trendFunnel.funnel" :key="stage.stageCode" class="rounded border border-slate-100 px-3 py-2">
-            {{ stage.stageName }}：{{ stage.count }}（转化率 {{ stage.conversionRate }}）
-          </li>
-        </ul>
-      </section>
+        <el-col :xs="24" :md="12">
+          <el-card shadow="never">
+            <template #header>漏斗图（转化链路）</template>
+            <el-table :data="data.trendFunnel.funnel" border size="small">
+              <el-table-column prop="stageName" label="阶段" min-width="120" />
+              <el-table-column prop="count" label="人数" min-width="80" />
+              <el-table-column prop="conversionRate" label="转化率" min-width="100" />
+            </el-table>
+          </el-card>
+        </el-col>
+      </el-row>
     </template>
-  </section>
+
+    <div v-loading="loading" class="h-2"></div>
+  </el-card>
 </template>

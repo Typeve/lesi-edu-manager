@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from "vue";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { adminApi, type ActivityItem, type ActivityScopeType, type ActivityType } from "../services/admin";
 import { ApiError } from "../services/http";
 
@@ -20,6 +21,10 @@ const feedback = ref("");
 const loading = ref(false);
 const activities = ref<ActivityItem[]>([]);
 
+const isCancelError = (error: unknown): boolean => {
+  return error === "cancel" || error === "close";
+};
+
 const parseTimeline = () => {
   return form.timelineText
     .split(/\n+/)
@@ -30,6 +35,15 @@ const parseTimeline = () => {
       return { key, at };
     })
     .filter((item) => item.key && item.at);
+};
+
+const ensureAdminKey = () => {
+  if (!session.state.adminKey) {
+    feedback.value = "请先输入管理员Key";
+    ElMessage.warning(feedback.value);
+    return false;
+  }
+  return true;
 };
 
 const syncSnapshot = () => {
@@ -45,6 +59,7 @@ const loadActivities = async () => {
     syncSnapshot();
   } catch (error) {
     feedback.value = error instanceof ApiError ? error.message : "活动加载失败";
+    ElMessage.error(feedback.value);
   } finally {
     loading.value = false;
   }
@@ -53,19 +68,23 @@ const loadActivities = async () => {
 const publish = async () => {
   if (!form.title.trim() || !form.ownerTeacherId.trim() || !form.startAt || !form.endAt || form.scopeTargetId <= 0) {
     feedback.value = "请完整填写活动信息";
+    ElMessage.warning(feedback.value);
     return;
   }
 
   const timelineNodes = parseTimeline();
   if (!timelineNodes.length) {
     feedback.value = "请至少配置一个时间节点";
+    ElMessage.warning(feedback.value);
     return;
   }
 
-  if (!confirm("确认发布该活动吗？")) return;
-
   try {
-    await adminApi.publishActivity({
+    await ElMessageBox.confirm("确认发布该活动吗？", "确认操作", {
+      type: "warning"
+    });
+
+    await adminApi.publishActivity(session.state.adminKey, {
       activityType: form.activityType,
       title: form.title.trim(),
       scopeType: form.scopeType,
@@ -78,9 +97,12 @@ const publish = async () => {
 
     await loadActivities();
     feedback.value = "活动发布成功，教师端可立即查看";
+    ElMessage.success(feedback.value);
     form.title = "";
   } catch (error) {
+    if (isCancelError(error)) return;
     feedback.value = error instanceof ApiError ? error.message : "活动发布失败";
+    ElMessage.error(feedback.value);
   }
 };
 
@@ -90,52 +112,105 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow">
-    <h1 class="text-xl font-bold text-slate-900">管理员｜活动中心</h1>
-    <p class="text-sm text-slate-600">创建课程/竞赛/项目活动，配置范围和负责人，发布后同步到教师端预览。</p>
-
-    <section class="rounded-xl border border-slate-200 p-4">
-      <h2 class="text-sm font-semibold">发布活动</h2>
-      <div class="mt-3 grid gap-2 md:grid-cols-3">
-        <select v-model="form.activityType" class="rounded border border-slate-300 px-2 py-1 text-sm">
-          <option value="course">course</option>
-          <option value="competition">competition</option>
-          <option value="project">project</option>
-        </select>
-        <input v-model="form.title" class="rounded border border-slate-300 px-2 py-1 text-sm" placeholder="活动标题" />
-        <input v-model="form.ownerTeacherId" class="rounded border border-slate-300 px-2 py-1 text-sm" placeholder="负责人教师ID" />
-
-        <select v-model="form.scopeType" class="rounded border border-slate-300 px-2 py-1 text-sm">
-          <option value="school">school</option>
-          <option value="college">college</option>
-          <option value="class">class</option>
-        </select>
-        <input v-model.number="form.scopeTargetId" type="number" min="1" class="rounded border border-slate-300 px-2 py-1 text-sm" placeholder="范围目标ID" />
-        <div class="flex gap-2">
-          <input v-model="form.startAt" type="datetime-local" class="w-full rounded border border-slate-300 px-2 py-1 text-sm" />
-          <input v-model="form.endAt" type="datetime-local" class="w-full rounded border border-slate-300 px-2 py-1 text-sm" />
-        </div>
+  <el-card shadow="never" class="rounded-2xl border border-slate-200">
+    <template #header>
+      <div class="space-y-1">
+        <h2 class="text-xl font-bold text-slate-900">管理员｜活动中心</h2>
+        <p class="text-sm text-slate-600">创建课程/竞赛/项目活动，配置范围和负责人，发布后同步到教师端预览。</p>
       </div>
+    </template>
 
-      <textarea v-model="form.timelineText" rows="3" class="mt-2 w-full rounded border border-slate-300 px-2 py-1 text-xs"></textarea>
+    <el-form label-position="top">
+      <el-form-item label="管理员 Key">
+        <el-input
+          :model-value="session.state.adminKey"
+          placeholder="输入管理员Key"
+          show-password
+          @update:model-value="session.setAdminKey"
+          clearable
+        />
+      </el-form-item>
+    </el-form>
 
-      <button class="mt-2 rounded bg-brand-500 px-3 py-1 text-sm text-white" @click="publish">发布活动</button>
-    </section>
+    <el-row :gutter="12" class="mb-4">
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never">
+          <template #header>发布活动</template>
+          <el-form label-position="top">
+            <el-row :gutter="8">
+              <el-col :span="12">
+                <el-form-item label="活动类型">
+                  <el-select v-model="form.activityType" class="w-full">
+                    <el-option label="course" value="course" />
+                    <el-option label="competition" value="competition" />
+                    <el-option label="project" value="project" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="活动标题">
+                  <el-input v-model="form.title" placeholder="活动标题" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="负责人教师ID">
+                  <el-input v-model="form.ownerTeacherId" placeholder="负责人教师ID" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="范围类型">
+                  <el-select v-model="form.scopeType" class="w-full">
+                    <el-option label="school" value="school" />
+                    <el-option label="college" value="college" />
+                    <el-option label="class" value="class" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="范围目标ID">
+                  <el-input-number v-model="form.scopeTargetId" :min="1" class="!w-full" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="开始时间">
+                  <el-date-picker v-model="form.startAt" type="datetime" class="!w-full" value-format="YYYY-MM-DDTHH:mm:ss" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="结束时间">
+                  <el-date-picker v-model="form.endAt" type="datetime" class="!w-full" value-format="YYYY-MM-DDTHH:mm:ss" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-form-item label="时间节点（每行 key|ISO 时间）">
+              <el-input v-model="form.timelineText" type="textarea" :rows="4" />
+            </el-form-item>
+          </el-form>
+          <el-button type="primary" @click="publish">发布活动</el-button>
+        </el-card>
+      </el-col>
 
-    <section class="rounded-xl border border-slate-200 p-4">
-      <div class="flex items-center justify-between">
-        <h2 class="text-sm font-semibold">已发布活动</h2>
-        <button class="rounded bg-slate-100 px-2 py-1 text-xs" @click="loadActivities">刷新</button>
-      </div>
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never">
+          <template #header>
+            <div class="flex items-center justify-between">
+              <span>已发布活动</span>
+              <el-button size="small" @click="loadActivities">刷新</el-button>
+            </div>
+          </template>
 
-      <p v-if="loading" class="mt-2 text-sm text-slate-500">加载中...</p>
-      <ul v-else class="mt-2 space-y-2 text-sm">
-        <li v-for="item in activities" :key="item.activityId" class="rounded border border-slate-100 px-3 py-2">
-          #{{ item.activityId }}｜{{ item.activityType }}｜{{ item.title }}｜{{ item.scopeType }}:{{ item.scopeTargetId }}｜负责人 {{ item.ownerTeacherId }}
-        </li>
-      </ul>
-    </section>
+          <el-table :data="activities" border size="small" v-loading="loading">
+            <el-table-column prop="activityId" label="ID" min-width="70" />
+            <el-table-column prop="activityType" label="类型" min-width="100" />
+            <el-table-column prop="title" label="标题" min-width="150" />
+            <el-table-column prop="scopeType" label="范围类型" min-width="100" />
+            <el-table-column prop="scopeTargetId" label="范围ID" min-width="80" />
+            <el-table-column prop="ownerTeacherId" label="负责人" min-width="100" />
+          </el-table>
+        </el-card>
+      </el-col>
+    </el-row>
 
-    <p v-if="feedback" class="text-sm text-brand-700">{{ feedback }}</p>
-  </section>
+    <el-alert v-if="feedback" :title="feedback" type="success" show-icon :closable="false" />
+  </el-card>
 </template>

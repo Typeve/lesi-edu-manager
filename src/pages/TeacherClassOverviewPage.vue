@@ -5,6 +5,10 @@ import { ApiError } from "../services/http";
 import { teacherApi } from "../services/teacher";
 import type { TeacherStudentItem } from "../types/teacher";
 
+interface AnomalyStudentRow extends TeacherStudentItem {
+  lastCheckInDays: number;
+}
+
 const router = useRouter();
 
 const options = reactive({
@@ -36,7 +40,7 @@ const load = async () => {
 
 watch(() => [options.classId], load, { immediate: true });
 
-const rows = computed(() =>
+const rows = computed<AnomalyStudentRow[]>(() =>
   students.value.map((item) => ({
     ...item,
     lastCheckInDays: (item.studentId % 45) + 1
@@ -54,56 +58,76 @@ const anomalyList = computed(() =>
   rows.value.filter((r) => !r.assessmentDone || !r.reportGenerated || r.lastCheckInDays > options.thresholdDays)
 );
 
+const getAnomalyText = (row: AnomalyStudentRow) => {
+  const texts: string[] = [];
+  if (!row.assessmentDone) texts.push("未测评");
+  if (!row.reportGenerated) texts.push("未报告");
+  if (row.lastCheckInDays > options.thresholdDays) {
+    texts.push(`${row.lastCheckInDays}天未打卡`);
+  }
+  return texts.join(" / ");
+};
+
 const goDetail = (studentId: number) => router.push(`/teacher/students/${studentId}`);
 </script>
 
 <template>
-  <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow">
-    <h1 class="text-xl font-bold text-slate-900">教师端｜班级视图与异常名单</h1>
-    <p class="mt-2 text-sm text-slate-600">默认异常阈值 30 天，可配置并查看异常学生名单。</p>
-
-    <div class="mt-4 grid gap-2 md:grid-cols-2">
-      <input v-model="options.classId" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="班级ID(可选)" />
-      <input v-model.number="options.thresholdDays" type="number" min="1" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="异常阈值天数" />
-    </div>
-
-    <p v-if="loading" class="mt-4 text-sm text-slate-500">加载中...</p>
-    <p v-else-if="errorText" class="mt-4 text-sm text-rose-600">{{ errorText }}</p>
-
-    <template v-else>
-      <div class="mt-5 grid gap-3 md:grid-cols-4">
-        <article class="rounded-xl border border-slate-200 p-3"><p class="text-xs text-slate-500">班级覆盖人数</p><p class="mt-1 text-xl font-bold">{{ overview.total }}</p></article>
-        <article class="rounded-xl border border-slate-200 p-3"><p class="text-xs text-slate-500">未测评</p><p class="mt-1 text-xl font-bold">{{ overview.assessmentPending }}</p></article>
-        <article class="rounded-xl border border-slate-200 p-3"><p class="text-xs text-slate-500">未报告</p><p class="mt-1 text-xl font-bold">{{ overview.reportPending }}</p></article>
-        <article class="rounded-xl border border-slate-200 p-3"><p class="text-xs text-slate-500">长期未打卡</p><p class="mt-1 text-xl font-bold">{{ overview.longNoCheckIn }}</p></article>
-      </div>
-
-      <div class="mt-6 overflow-x-auto">
-        <table class="min-w-full text-left text-sm">
-          <thead>
-            <tr class="border-b border-slate-200 text-slate-500">
-              <th class="px-2 py-2">学号</th>
-              <th class="px-2 py-2">姓名</th>
-              <th class="px-2 py-2">异常项</th>
-              <th class="px-2 py-2">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in anomalyList" :key="item.studentId" class="border-b border-slate-100">
-              <td class="px-2 py-2">{{ item.studentNo }}</td>
-              <td class="px-2 py-2">{{ item.name }}</td>
-              <td class="px-2 py-2">
-                <span v-if="!item.assessmentDone">未测评 </span>
-                <span v-if="!item.reportGenerated">未报告 </span>
-                <span v-if="item.lastCheckInDays > options.thresholdDays">{{ item.lastCheckInDays }}天未打卡</span>
-              </td>
-              <td class="px-2 py-2">
-                <button class="rounded bg-brand-500 px-2 py-1 text-xs text-white" @click="goDetail(item.studentId)">查看详情</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+  <el-card shadow="never" class="rounded-2xl border border-slate-200">
+    <template #header>
+      <div class="space-y-1">
+        <h2 class="text-xl font-bold text-slate-900">教师端｜班级视图与异常名单</h2>
+        <p class="text-sm text-slate-600">默认异常阈值 30 天，可配置并查看异常学生名单。</p>
       </div>
     </template>
-  </section>
+
+    <el-form label-position="top">
+      <el-row :gutter="12">
+        <el-col :xs="24" :md="8">
+          <el-form-item label="教师ID">
+            <el-input
+              :model-value="session.state.teacherId"
+              placeholder="输入教师ID（如 T-1）"
+              @update:model-value="session.setTeacherId"
+              clearable
+            />
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :md="8">
+          <el-form-item label="班级ID">
+            <el-input v-model="options.classId" placeholder="班级ID（可选）" clearable />
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :md="8">
+          <el-form-item label="异常阈值天数">
+            <el-input-number v-model="options.thresholdDays" :min="1" class="!w-full" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+    </el-form>
+
+    <el-alert v-if="!hasTeacherId" title="请先输入教师ID。" type="warning" show-icon :closable="false" />
+    <el-alert v-else-if="errorText" :title="errorText" type="error" show-icon :closable="false" />
+
+    <template v-else>
+      <el-row :gutter="12" class="mb-4">
+        <el-col :xs="24" :md="6"><el-statistic title="班级覆盖人数" :value="overview.total" /></el-col>
+        <el-col :xs="24" :md="6"><el-statistic title="未测评" :value="overview.assessmentPending" /></el-col>
+        <el-col :xs="24" :md="6"><el-statistic title="未报告" :value="overview.reportPending" /></el-col>
+        <el-col :xs="24" :md="6"><el-statistic title="长期未打卡" :value="overview.longNoCheckIn" /></el-col>
+      </el-row>
+
+      <el-table :data="anomalyList" border v-loading="loading">
+        <el-table-column prop="studentNo" label="学号" min-width="130" />
+        <el-table-column prop="name" label="姓名" min-width="100" />
+        <el-table-column label="异常项" min-width="260">
+          <template #default="{ row }">{{ getAnomalyText(row) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" min-width="120" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" size="small" @click="goDetail(row.studentId)">查看详情</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </template>
+  </el-card>
 </template>

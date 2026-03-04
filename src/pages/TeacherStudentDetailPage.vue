@@ -32,20 +32,21 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow">
-    <div class="mb-4 flex items-center justify-between">
-      <h1 class="text-xl font-bold text-slate-900">学生详情</h1>
-      <button class="rounded-lg bg-slate-100 px-3 py-1.5 text-sm" @click="router.push('/teacher/students')">返回</button>
-    </div>
+  <el-card shadow="never" class="rounded-2xl border border-slate-200" v-loading="loading">
+    <template #header>
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-bold text-slate-900">学生详情</h2>
+        <el-button @click="router.push('/teacher/students')">返回</el-button>
+      </div>
+    </template>
 
-    <p v-if="loading" class="text-sm text-slate-500">加载中...</p>
-    <p v-else-if="errorText" class="text-sm text-rose-600">{{ errorText }}</p>
+    <el-alert v-if="errorText" :title="errorText" type="error" show-icon :closable="false" />
 
-    <dl v-else-if="detail" class="grid gap-3 md:grid-cols-2">
-      <div class="rounded-xl border border-slate-200 p-3"><dt class="text-xs text-slate-500">学号</dt><dd class="mt-1 text-sm">{{ detail.studentNo }}</dd></div>
-      <div class="rounded-xl border border-slate-200 p-3"><dt class="text-xs text-slate-500">姓名</dt><dd class="mt-1 text-sm">{{ detail.name }}</dd></div>
-      <div class="rounded-xl border border-slate-200 p-3"><dt class="text-xs text-slate-500">测评提交</dt><dd class="mt-1 text-sm">{{ detail.assessment.done ? '已完成' : '未完成' }}</dd></div>
-      <div class="rounded-xl border border-slate-200 p-3"><dt class="text-xs text-slate-500">报告数量</dt><dd class="mt-1 text-sm">{{ detail.reports.length }}</dd></div>
-    </dl>
-  </section>
+    <el-descriptions v-else-if="detail" :column="2" border>
+      <el-descriptions-item label="学号">{{ detail.studentNo }}</el-descriptions-item>
+      <el-descriptions-item label="姓名">{{ detail.name }}</el-descriptions-item>
+      <el-descriptions-item label="测评提交">{{ detail.assessment.done ? "已完成" : "未完成" }}</el-descriptions-item>
+      <el-descriptions-item label="报告数量">{{ detail.reports.length }}</el-descriptions-item>
+    </el-descriptions>
+  </el-card>
 </template>
