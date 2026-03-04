@@ -17,9 +17,9 @@ const classMetrics = ref<ClassMetric[]>([
 ]);
 
 const cards = computed(() => {
-  const totalCovered = classMetrics.value.reduce((s, c) => s + c.covered, 0);
+  const totalCovered = classMetrics.value.reduce((sum, item) => sum + item.covered, 0);
   const avg = (key: "assessmentRate" | "reportRate" | "taskRate") =>
-    classMetrics.value.reduce((s, c) => s + c[key], 0) / classMetrics.value.length;
+    classMetrics.value.reduce((sum, item) => sum + item[key], 0) / classMetrics.value.length;
 
   return {
     covered: totalCovered,
@@ -41,62 +41,62 @@ const funnel = ref([
 </script>
 
 <template>
-  <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow">
-    <h1 class="text-xl font-bold text-slate-900">教师端驾驶舱</h1>
+  <el-card shadow="never" class="rounded-2xl border border-slate-200">
+    <template #header>
+      <h2 class="text-xl font-bold text-slate-900">教师端驾驶舱</h2>
+    </template>
 
-    <div class="grid gap-3 md:grid-cols-4">
-      <article class="rounded-xl border border-slate-200 p-3"><p class="text-xs text-slate-500">覆盖人数</p><p class="mt-1 text-xl font-bold">{{ cards.covered }}</p></article>
-      <article class="rounded-xl border border-slate-200 p-3"><p class="text-xs text-slate-500">测评完成率</p><p class="mt-1 text-xl font-bold">{{ (cards.assessment*100).toFixed(1) }}%</p></article>
-      <article class="rounded-xl border border-slate-200 p-3"><p class="text-xs text-slate-500">报告生成率</p><p class="mt-1 text-xl font-bold">{{ (cards.report*100).toFixed(1) }}%</p></article>
-      <article class="rounded-xl border border-slate-200 p-3"><p class="text-xs text-slate-500">任务完成率</p><p class="mt-1 text-xl font-bold">{{ (cards.task*100).toFixed(1) }}%</p></article>
-    </div>
+    <el-row :gutter="12" class="mb-4">
+      <el-col :xs="24" :md="6"><el-statistic title="覆盖人数" :value="cards.covered" /></el-col>
+      <el-col :xs="24" :md="6"><el-statistic title="测评完成率" :value="cards.assessment * 100" suffix="%" :precision="1" /></el-col>
+      <el-col :xs="24" :md="6"><el-statistic title="报告生成率" :value="cards.report * 100" suffix="%" :precision="1" /></el-col>
+      <el-col :xs="24" :md="6"><el-statistic title="任务完成率" :value="cards.task * 100" suffix="%" :precision="1" /></el-col>
+    </el-row>
 
-    <div class="grid gap-4 md:grid-cols-2">
-      <section class="rounded-xl border border-slate-200 p-4">
-        <h2 class="text-sm font-semibold text-slate-900">柱状图｜班级对比（测评完成率）</h2>
-        <div class="mt-3 space-y-2">
-          <div v-for="item in classMetrics" :key="item.className" class="text-xs">
-            <div class="mb-1 flex justify-between"><span>{{ item.className }}</span><span>{{ (item.assessmentRate*100).toFixed(1) }}%</span></div>
-            <div class="h-2 rounded bg-slate-100"><div class="h-2 rounded bg-brand-500" :style="{ width: `${item.assessmentRate*100}%` }"></div></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="rounded-xl border border-slate-200 p-4">
-        <h2 class="text-sm font-semibold text-slate-900">堆叠柱｜方向分布</h2>
-        <div class="mt-3 space-y-2">
-          <div v-for="item in classMetrics" :key="`${item.className}-stack`" class="text-xs">
-            <div class="mb-1">{{ item.className }}</div>
-            <div class="flex h-3 overflow-hidden rounded bg-slate-100">
-              <div class="bg-sky-500" :style="{ width: `${(item.direction.employment/item.covered)*100}%` }"></div>
-              <div class="bg-violet-500" :style="{ width: `${(item.direction.postgraduate/item.covered)*100}%` }"></div>
-              <div class="bg-amber-500" :style="{ width: `${(item.direction.civil/item.covered)*100}%` }"></div>
+    <el-row :gutter="12">
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never" class="mb-3">
+          <template #header>柱状图｜班级对比（测评完成率）</template>
+          <div class="space-y-2">
+            <div v-for="item in classMetrics" :key="item.className" class="text-xs">
+              <div class="mb-1 flex justify-between"><span>{{ item.className }}</span><span>{{ (item.assessmentRate * 100).toFixed(1) }}%</span></div>
+              <el-progress :percentage="Number((item.assessmentRate * 100).toFixed(1))" :stroke-width="10" />
             </div>
           </div>
-        </div>
-      </section>
-
-      <section class="rounded-xl border border-slate-200 p-4">
-        <h2 class="text-sm font-semibold text-slate-900">折线图｜30天趋势（示意）</h2>
-        <svg class="mt-3 h-32 w-full" viewBox="0 0 300 120">
-          <polyline
-            fill="none"
-            stroke="#0b7285"
-            stroke-width="3"
-            :points="trend.map((v, i) => `${i*30},${120-v}`).join(' ')"
-          />
-        </svg>
-      </section>
-
-      <section class="rounded-xl border border-slate-200 p-4">
-        <h2 class="text-sm font-semibold text-slate-900">漏斗图｜转化链路</h2>
-        <div class="mt-3 space-y-2">
-          <div v-for="(item, idx) in funnel" :key="item.name" class="text-xs">
-            <div class="mb-1 flex justify-between"><span>{{ idx+1 }}. {{ item.name }}</span><span>{{ item.value }}</span></div>
-            <div class="h-2 rounded bg-slate-100"><div class="h-2 rounded bg-brand-500" :style="{ width: `${(item.value / funnel[0].value) * 100}%` }"></div></div>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never" class="mb-3">
+          <template #header>堆叠柱｜方向分布</template>
+          <div class="space-y-3">
+            <div v-for="item in classMetrics" :key="`${item.className}-stack`" class="text-xs">
+              <div class="mb-1">{{ item.className }}</div>
+              <el-progress :show-text="false" :percentage="Math.round((item.direction.employment / item.covered) * 100)" color="#409eff" />
+              <el-progress :show-text="false" :percentage="Math.round((item.direction.postgraduate / item.covered) * 100)" color="#67c23a" />
+              <el-progress :show-text="false" :percentage="Math.round((item.direction.civil / item.covered) * 100)" color="#e6a23c" />
+            </div>
           </div>
-        </div>
-      </section>
-    </div>
-  </section>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never">
+          <template #header>折线图｜30天趋势（示意）</template>
+          <svg class="h-32 w-full" viewBox="0 0 300 120">
+            <polyline fill="none" stroke="#409eff" stroke-width="3" :points="trend.map((v, i) => `${i * 30},${120 - v}`).join(' ')" />
+          </svg>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never">
+          <template #header>漏斗图｜转化链路</template>
+          <div class="space-y-2">
+            <div v-for="(item, idx) in funnel" :key="item.name" class="text-xs">
+              <div class="mb-1 flex justify-between"><span>{{ idx + 1 }}. {{ item.name }}</span><span>{{ item.value }}</span></div>
+              <el-progress :percentage="Math.round((item.value / funnel[0].value) * 100)" />
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+  </el-card>
 </template>

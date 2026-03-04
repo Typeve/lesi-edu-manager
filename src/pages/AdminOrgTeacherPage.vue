@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { adminApi } from "../services/admin";
 import { ApiError } from "../services/http";
 import { useSessionStore } from "../stores/session";
@@ -13,13 +14,20 @@ const colleges = ref<Array<{ collegeId: number; name: string }>>([]);
 const teachers = ref<Array<{ teacherId: string; name: string; account: string; status: "active" | "frozen" }>>([]);
 const feedback = ref("");
 
+const isCancelError = (error: unknown): boolean => {
+  return error === "cancel" || error === "close";
+};
+
 const handleError = (error: unknown) => {
+  if (isCancelError(error)) return;
   feedback.value = error instanceof ApiError ? error.message : "操作失败";
+  ElMessage.error(feedback.value);
 };
 
 const ensureAdminKey = () => {
   if (!session.state.adminKey) {
     feedback.value = "请先输入管理员Key";
+    ElMessage.warning(feedback.value);
     return false;
   }
   return true;
@@ -34,6 +42,7 @@ const createCollege = async () => {
     });
     colleges.value.push({ collegeId: created.collegeId, name: collegeForm.name });
     feedback.value = "组织树更新成功（已新增学院）";
+    ElMessage.success(feedback.value);
     collegeForm.name = "";
   } catch (error) {
     handleError(error);
@@ -42,15 +51,23 @@ const createCollege = async () => {
 
 const renameCollege = async (collegeId: number) => {
   if (!ensureAdminKey()) return;
-  const nextName = prompt("请输入新学院名称");
-  if (!nextName) return;
-
-  if (!confirm(`确认将学院改名为 ${nextName} 吗？`)) return;
 
   try {
+    const { value: nextName } = await ElMessageBox.prompt("请输入新学院名称", "学院改名", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      inputPattern: /.+/,
+      inputErrorMessage: "学院名称不能为空"
+    });
+
+    await ElMessageBox.confirm(`确认将学院改名为 ${nextName} 吗？`, "确认操作", {
+      type: "warning"
+    });
+
     await adminApi.updateCollege(session.state.adminKey, collegeId, { name: nextName });
     colleges.value = colleges.value.map((item) => (item.collegeId === collegeId ? { ...item, name: nextName } : item));
     feedback.value = "组织树更新成功（已重命名）";
+    ElMessage.success(feedback.value);
   } catch (error) {
     handleError(error);
   }
@@ -58,12 +75,15 @@ const renameCollege = async (collegeId: number) => {
 
 const removeCollege = async (collegeId: number) => {
   if (!ensureAdminKey()) return;
-  if (!confirm("确认删除该学院吗？此操作不可恢复。")) return;
-
   try {
+    await ElMessageBox.confirm("确认删除该学院吗？此操作不可恢复。", "危险操作", {
+      type: "warning"
+    });
+
     await adminApi.deleteCollege(session.state.adminKey, collegeId);
     colleges.value = colleges.value.filter((item) => item.collegeId !== collegeId);
     feedback.value = "组织树更新成功（已删除）";
+    ElMessage.success(feedback.value);
   } catch (error) {
     handleError(error);
   }
@@ -80,6 +100,7 @@ const createTeacher = async () => {
       status: teacherForm.status
     });
     feedback.value = "教师账号操作已即时生效";
+    ElMessage.success(feedback.value);
     teacherForm.name = "";
     teacherForm.account = "";
     teacherForm.password = "";
@@ -91,12 +112,16 @@ const createTeacher = async () => {
 const toggleTeacherStatus = async (teacherId: string, status: "active" | "frozen") => {
   if (!ensureAdminKey()) return;
   const nextStatus = status === "active" ? "frozen" : "active";
-  if (!confirm(`确认将账号状态改为 ${nextStatus} 吗？`)) return;
 
   try {
+    await ElMessageBox.confirm(`确认将账号状态改为 ${nextStatus} 吗？`, "确认操作", {
+      type: "warning"
+    });
+
     await adminApi.updateTeacherStatus(session.state.adminKey, teacherId, nextStatus);
     teachers.value = teachers.value.map((item) => (item.teacherId === teacherId ? { ...item, status: nextStatus } : item));
     feedback.value = "教师账号操作已即时生效";
+    ElMessage.success(feedback.value);
   } catch (error) {
     handleError(error);
   }
@@ -104,13 +129,22 @@ const toggleTeacherStatus = async (teacherId: string, status: "active" | "frozen
 
 const resetTeacherPassword = async (teacherId: string) => {
   if (!ensureAdminKey()) return;
-  const newPassword = prompt("请输入新密码（至少8位）");
-  if (!newPassword) return;
-  if (!confirm("确认重置该教师密码吗？")) return;
 
   try {
+    const { value: newPassword } = await ElMessageBox.prompt("请输入新密码（至少8位）", "重置密码", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      inputPattern: /^.{8,}$/,
+      inputErrorMessage: "密码至少8位"
+    });
+
+    await ElMessageBox.confirm("确认重置该教师密码吗？", "确认操作", {
+      type: "warning"
+    });
+
     await adminApi.resetTeacherPassword(session.state.adminKey, teacherId, newPassword);
     feedback.value = "已完成密码重置";
+    ElMessage.success(feedback.value);
   } catch (error) {
     handleError(error);
   }
@@ -118,59 +152,115 @@ const resetTeacherPassword = async (teacherId: string) => {
 </script>
 
 <template>
-  <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow">
-    <h1 class="text-xl font-bold text-slate-900">管理员｜组织与教师账号管理</h1>
+  <el-card shadow="never" class="rounded-2xl border border-slate-200">
+    <template #header>
+      <h2 class="text-xl font-bold text-slate-900">管理员｜组织与教师账号管理</h2>
+    </template>
 
-    <input
-      :value="session.state.adminKey"
-      @input="session.setAdminKey(($event.target as HTMLInputElement).value)"
-      class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-      placeholder="输入管理员Key"
-    />
+    <el-form label-position="top">
+      <el-form-item label="管理员 Key">
+        <el-input
+          :model-value="session.state.adminKey"
+          placeholder="输入管理员Key"
+          show-password
+          @update:model-value="session.setAdminKey"
+          clearable
+        />
+      </el-form-item>
+    </el-form>
 
-    <section class="rounded-xl border border-slate-200 p-4">
-      <h2 class="text-sm font-semibold">组织树维护</h2>
-      <div class="mt-3 flex gap-2">
-        <input v-model.number="collegeForm.schoolId" type="number" class="rounded border border-slate-300 px-2 py-1 text-sm" placeholder="学校ID" />
-        <input v-model="collegeForm.name" class="rounded border border-slate-300 px-2 py-1 text-sm" placeholder="学院名称" />
-        <button class="rounded bg-brand-500 px-3 py-1 text-sm text-white" @click="createCollege">新增学院</button>
-      </div>
+    <el-row :gutter="12" class="mb-4">
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never">
+          <template #header>组织树维护</template>
+          <el-form label-position="top">
+            <el-row :gutter="8">
+              <el-col :span="8">
+                <el-form-item label="学校ID">
+                  <el-input-number v-model="collegeForm.schoolId" :min="1" class="!w-full" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="16">
+                <el-form-item label="学院名称">
+                  <el-input v-model="collegeForm.name" placeholder="学院名称" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-form>
+          <el-button type="primary" @click="createCollege">新增学院</el-button>
 
-      <ul class="mt-3 space-y-2 text-sm">
-        <li v-for="college in colleges" :key="college.collegeId" class="flex items-center justify-between rounded border border-slate-100 px-3 py-2">
-          <span>{{ college.collegeId }} - {{ college.name }}</span>
-          <div class="space-x-2">
-            <button class="rounded bg-slate-100 px-2 py-1" @click="renameCollege(college.collegeId)">改名</button>
-            <button class="rounded bg-rose-100 px-2 py-1 text-rose-700" @click="removeCollege(college.collegeId)">删除</button>
-          </div>
-        </li>
-      </ul>
-    </section>
+          <el-table :data="colleges" border class="mt-3">
+            <el-table-column prop="collegeId" label="学院ID" min-width="100" />
+            <el-table-column prop="name" label="学院名称" min-width="160" />
+            <el-table-column label="操作" min-width="170">
+              <template #default="{ row }">
+                <el-space>
+                  <el-button size="small" @click="renameCollege(row.collegeId)">改名</el-button>
+                  <el-button size="small" type="danger" plain @click="removeCollege(row.collegeId)">删除</el-button>
+                </el-space>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-col>
 
-    <section class="rounded-xl border border-slate-200 p-4">
-      <h2 class="text-sm font-semibold">教师账号管理</h2>
-      <div class="mt-3 grid gap-2 md:grid-cols-5">
-        <input v-model="teacherForm.name" class="rounded border border-slate-300 px-2 py-1 text-sm" placeholder="姓名" />
-        <input v-model="teacherForm.account" class="rounded border border-slate-300 px-2 py-1 text-sm" placeholder="账号" />
-        <input v-model="teacherForm.password" class="rounded border border-slate-300 px-2 py-1 text-sm" placeholder="密码" />
-        <select v-model="teacherForm.status" class="rounded border border-slate-300 px-2 py-1 text-sm">
-          <option value="active">active</option>
-          <option value="frozen">frozen</option>
-        </select>
-        <button class="rounded bg-brand-500 px-3 py-1 text-sm text-white" @click="createTeacher">创建教师</button>
-      </div>
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never">
+          <template #header>教师账号管理</template>
+          <el-form label-position="top">
+            <el-row :gutter="8">
+              <el-col :span="12">
+                <el-form-item label="姓名">
+                  <el-input v-model="teacherForm.name" placeholder="姓名" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="账号">
+                  <el-input v-model="teacherForm.account" placeholder="账号" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="密码">
+                  <el-input v-model="teacherForm.password" placeholder="密码" show-password />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="状态">
+                  <el-select v-model="teacherForm.status" class="w-full">
+                    <el-option label="active" value="active" />
+                    <el-option label="frozen" value="frozen" />
+                  </el-select>
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </el-form>
 
-      <ul class="mt-3 space-y-2 text-sm">
-        <li v-for="teacher in teachers" :key="teacher.teacherId" class="flex items-center justify-between rounded border border-slate-100 px-3 py-2">
-          <span>{{ teacher.teacherId }}｜{{ teacher.name }}｜{{ teacher.account }}｜{{ teacher.status }}</span>
-          <div class="space-x-2">
-            <button class="rounded bg-slate-100 px-2 py-1" @click="toggleTeacherStatus(teacher.teacherId, teacher.status)">切换状态</button>
-            <button class="rounded bg-amber-100 px-2 py-1 text-amber-700" @click="resetTeacherPassword(teacher.teacherId)">重置密码</button>
-          </div>
-        </li>
-      </ul>
-    </section>
+          <el-button type="primary" @click="createTeacher">创建教师</el-button>
 
-    <p v-if="feedback" class="text-sm text-brand-700">{{ feedback }}</p>
-  </section>
+          <el-table :data="teachers" border class="mt-3">
+            <el-table-column prop="teacherId" label="教师ID" min-width="100" />
+            <el-table-column prop="name" label="姓名" min-width="90" />
+            <el-table-column prop="account" label="账号" min-width="120" />
+            <el-table-column label="状态" min-width="90">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 'active' ? 'success' : 'warning'" effect="light">
+                  {{ row.status }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" min-width="200">
+              <template #default="{ row }">
+                <el-space>
+                  <el-button size="small" @click="toggleTeacherStatus(row.teacherId, row.status)">切换状态</el-button>
+                  <el-button size="small" type="warning" plain @click="resetTeacherPassword(row.teacherId)">重置密码</el-button>
+                </el-space>
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-alert v-if="feedback" :title="feedback" type="success" show-icon :closable="false" />
+  </el-card>
 </template>

@@ -25,23 +25,34 @@ const visibleActivities = computed(() => {
 </script>
 
 <template>
-  <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow">
-    <h1 class="text-xl font-bold text-slate-900">教师端｜活动可见列表</h1>
-    <p class="mt-2 text-sm text-slate-600">按当前教师ID展示已发布活动（由管理员发布后同步）。</p>
+  <el-card shadow="never" class="rounded-2xl border border-slate-200">
+    <template #header>
+      <div class="space-y-1">
+        <h2 class="text-xl font-bold text-slate-900">教师端｜活动可见列表</h2>
+        <p class="text-sm text-slate-600">按当前教师ID展示已发布活动（由管理员发布后同步）。</p>
+      </div>
+    </template>
 
-    <input
-      :value="session.state.teacherId"
-      @input="session.setTeacherId(($event.target as HTMLInputElement).value)"
-      class="mt-3 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-      placeholder="输入教师ID（如 T-1）"
-    />
+    <el-form label-position="top">
+      <el-form-item label="教师ID">
+        <el-input
+          :model-value="session.state.teacherId"
+          placeholder="输入教师ID（如 T-1）"
+          @update:model-value="session.setTeacherId"
+          clearable
+        />
+      </el-form-item>
+    </el-form>
 
-    <ul class="mt-4 space-y-2 text-sm">
-      <li v-for="item in visibleActivities" :key="item.activityId" class="rounded border border-slate-100 px-3 py-2">
-        #{{ item.activityId }}｜{{ item.activityType }}｜{{ item.title }}｜{{ item.scopeType }}:{{ item.scopeTargetId }}
-      </li>
-    </ul>
-
-    <p v-if="!visibleActivities.length" class="mt-3 text-xs text-slate-500">当前教师暂无可见活动。</p>
-  </section>
+    <el-table :data="visibleActivities" border>
+      <el-table-column prop="activityId" label="ID" min-width="80" />
+      <el-table-column prop="activityType" label="类型" min-width="100" />
+      <el-table-column prop="title" label="标题" min-width="180" />
+      <el-table-column prop="scopeType" label="范围类型" min-width="100" />
+      <el-table-column prop="scopeTargetId" label="范围ID" min-width="100" />
+      <template #empty>
+        <el-empty description="当前教师暂无可见活动。" />
+      </template>
+    </el-table>
+  </el-card>
 </template>

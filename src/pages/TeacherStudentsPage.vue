@@ -69,65 +69,94 @@ const goDetail = (studentId: number) => {
 </script>
 
 <template>
-  <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow">
-    <h1 class="text-xl font-bold text-slate-900">教师端｜学生列表</h1>
-    <p class="mt-2 text-sm text-slate-600">按班级/专业/年级/测评状态/报告状态筛选，仅展示有权限学生。</p>
+  <el-card shadow="never" class="rounded-2xl border border-slate-200">
+    <template #header>
+      <div class="space-y-1">
+        <h2 class="text-xl font-bold text-slate-900">教师端｜学生列表</h2>
+        <p class="text-sm text-slate-600">按班级/专业/年级/测评状态/报告状态筛选，仅展示有权限学生。</p>
+      </div>
+    </template>
 
-    <div class="mt-4 grid gap-2 md:grid-cols-3">
-      <input
-        :value="session.state.teacherId"
-        @input="session.setTeacherId(($event.target as HTMLInputElement).value)"
-        class="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-        placeholder="输入教师ID（如 T-1）"
-      />
-      <input v-model="filters.classId" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="班级ID" />
-      <input v-model="filters.majorId" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="专业ID" />
-      <input v-model="filters.grade" class="rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="年级" />
-      <select v-model="filters.assessmentStatus" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-        <option value="">测评状态（全部）</option>
-        <option value="done">已完成</option>
-        <option value="pending">未完成</option>
-      </select>
-      <select v-model="filters.reportStatus" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-        <option value="">报告状态（全部）</option>
-        <option value="generated">已生成</option>
-        <option value="pending">未生成</option>
-      </select>
-    </div>
+    <el-form label-position="top" class="mb-2">
+      <el-row :gutter="12">
+        <el-col :xs="24" :md="8">
+          <el-form-item label="教师ID">
+            <el-input
+              :model-value="session.state.teacherId"
+              placeholder="输入教师ID（如 T-1）"
+              @update:model-value="session.setTeacherId"
+              clearable
+            />
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :md="8">
+          <el-form-item label="班级ID">
+            <el-input v-model="filters.classId" placeholder="班级ID" clearable />
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :md="8">
+          <el-form-item label="专业ID">
+            <el-input v-model="filters.majorId" placeholder="专业ID" clearable />
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :md="8">
+          <el-form-item label="年级">
+            <el-input v-model="filters.grade" placeholder="年级" clearable />
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :md="8">
+          <el-form-item label="测评状态">
+            <el-select v-model="filters.assessmentStatus" class="w-full" placeholder="测评状态（全部）" clearable>
+              <el-option label="已完成" value="done" />
+              <el-option label="未完成" value="pending" />
+            </el-select>
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :md="8">
+          <el-form-item label="报告状态">
+            <el-select v-model="filters.reportStatus" class="w-full" placeholder="报告状态（全部）" clearable>
+              <el-option label="已生成" value="generated" />
+              <el-option label="未生成" value="pending" />
+            </el-select>
+          </el-form-item>
+        </el-col>
+      </el-row>
+    </el-form>
 
-    <p v-if="!hasTeacherId" class="mt-4 text-sm text-amber-700">请先输入教师ID。</p>
-    <p v-else-if="loading" class="mt-4 text-sm text-slate-500">加载中...</p>
-    <p v-else-if="errorText" class="mt-4 text-sm text-rose-600">{{ errorText }}</p>
+    <el-alert v-if="!hasTeacherId" title="请先输入教师ID。" type="warning" show-icon :closable="false" />
+    <el-alert v-else-if="errorText" :title="errorText" type="error" show-icon :closable="false" />
 
-    <div v-else class="mt-5 overflow-x-auto">
-      <table class="min-w-full text-left text-sm">
-        <thead>
-          <tr class="border-b border-slate-200 text-slate-500">
-            <th class="px-2 py-2">学号</th>
-            <th class="px-2 py-2">姓名</th>
-            <th class="px-2 py-2">班级</th>
-            <th class="px-2 py-2">专业</th>
-            <th class="px-2 py-2">测评</th>
-            <th class="px-2 py-2">报告</th>
-            <th class="px-2 py-2">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in items" :key="item.studentId" class="border-b border-slate-100">
-            <td class="px-2 py-2">{{ item.studentNo }}</td>
-            <td class="px-2 py-2">{{ item.name }}</td>
-            <td class="px-2 py-2">{{ item.className }}</td>
-            <td class="px-2 py-2">{{ item.majorName || "--" }}</td>
-            <td class="px-2 py-2">{{ item.assessmentDone ? "已完成" : "未完成" }}</td>
-            <td class="px-2 py-2">{{ item.reportGenerated ? "已生成" : "未生成" }}</td>
-            <td class="px-2 py-2">
-              <button class="rounded bg-brand-500 px-2 py-1 text-xs text-white" @click="goDetail(item.studentId)">查看详情</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <el-table v-else :data="items" border class="mt-4" v-loading="loading">
+      <el-table-column prop="studentNo" label="学号" min-width="140" />
+      <el-table-column prop="name" label="姓名" min-width="110" />
+      <el-table-column prop="className" label="班级" min-width="140" />
+      <el-table-column prop="majorName" label="专业" min-width="140">
+        <template #default="{ row }">{{ row.majorName || "--" }}</template>
+      </el-table-column>
+      <el-table-column label="测评" min-width="100">
+        <template #default="{ row }">
+          <el-tag :type="row.assessmentDone ? 'success' : 'warning'" effect="light">
+            {{ row.assessmentDone ? "已完成" : "未完成" }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="报告" min-width="100">
+        <template #default="{ row }">
+          <el-tag :type="row.reportGenerated ? 'success' : 'info'" effect="light">
+            {{ row.reportGenerated ? "已生成" : "未生成" }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" min-width="120" fixed="right">
+        <template #default="{ row }">
+          <el-button type="primary" size="small" @click="goDetail(row.studentId)">查看详情</el-button>
+        </template>
+      </el-table-column>
+      <template #empty>
+        <el-empty description="暂无数据" />
+      </template>
+    </el-table>
 
-      <p class="mt-3 text-xs text-slate-500">共 {{ total }} 条（权限外数据由后端过滤，不显示）</p>
-    </div>
-  </section>
+    <div class="mt-3 text-xs text-slate-500">共 {{ total }} 条（权限外数据由后端过滤，不显示）</div>
+  </el-card>
 </template>
