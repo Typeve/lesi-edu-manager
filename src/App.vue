@@ -28,6 +28,7 @@ const activePath = computed(() => {
   return route.path;
 });
 
+const isPublicRoute = computed(() => route.meta.requiresAuth === false);
 const activeLabel = computed(() => navItems.find((item) => item.path === activePath.value)?.label ?? "工作台");
 
 const onSelect = (path: string) => {
@@ -36,7 +37,9 @@ const onSelect = (path: string) => {
 </script>
 
 <template>
-  <el-container class="app-layout">
+  <RouterView v-if="isPublicRoute" />
+
+  <el-container v-else class="app-layout">
     <el-aside width="240px" class="app-layout__aside">
       <div class="app-layout__brand">
         <p class="app-layout__brand-subtitle">LESI EDU MANAGER</p>

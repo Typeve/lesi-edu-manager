@@ -5,4 +5,13 @@ import App from "./App.vue";
 import router from "./router";
 import "./style.css";
 
-createApp(App).use(router).use(ElementPlus).mount("#app");
+const app = createApp(App);
+app.use(router);
+app.use(ElementPlus);
+
+const bootstrap = async () => {
+  await router.isReady();
+  app.mount("#app");
+};
+
+void bootstrap();
