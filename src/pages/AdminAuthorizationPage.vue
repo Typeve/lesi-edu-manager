@@ -3,6 +3,8 @@ import { computed, reactive, ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { adminApi, type AccessLevel, type AuthorizationGrantPayload, type GrantType } from "../services/admin";
 import { ApiError } from "../services/http";
+import { teacherApi } from "../services/teacher";
+import type { TeacherStudentItem } from "../types/teacher";
 
 interface ScopeSnapshot extends AuthorizationGrantPayload {
   updatedAt: string;
@@ -19,6 +21,9 @@ const form = reactive({
 
 const batchText = ref("class,101,read\nstudent,1001,manage");
 const feedback = ref("");
+const loadingPreview = ref(false);
+const previewTotal = ref(0);
+const previewItems = ref<TeacherStudentItem[]>([]);
 
 const scopes = ref<ScopeSnapshot[]>(readSnapshot());
 
@@ -50,11 +55,6 @@ const isCancelError = (error: unknown): boolean => {
 };
 
 const ensureReady = () => {
-  if (!session.state.adminKey) {
-    feedback.value = "请先输入管理员Key";
-    ElMessage.warning(feedback.value);
-    return false;
-  }
   if (!form.teacherId.trim()) {
     feedback.value = "请先输入教师ID";
     ElMessage.warning(feedback.value);
@@ -93,6 +93,26 @@ const handleError = (error: unknown) => {
   ElMessage.error(feedback.value);
 };
 
+const refreshPreview = async () => {
+  if (!form.teacherId.trim()) {
+    previewItems.value = [];
+    previewTotal.value = 0;
+    return;
+  }
+
+  loadingPreview.value = true;
+  try {
+    const result = await teacherApi.getStudents(form.teacherId.trim(), { page: 1, pageSize: 20 });
+    previewItems.value = result.items;
+    previewTotal.value = result.total;
+  } catch {
+    previewItems.value = [];
+    previewTotal.value = 0;
+  } finally {
+    loadingPreview.value = false;
+  }
+};
+
 const submitSingle = async (mode: "assign" | "revoke") => {
   if (!ensureReady()) return;
   if (!Number.isInteger(form.targetId) || form.targetId <= 0) {
@@ -116,11 +136,11 @@ const submitSingle = async (mode: "assign" | "revoke") => {
     if (mode === "assign") {
       await adminApi.assignGrant(payload);
       upsertSnapshot(payload);
-      feedback.value = "授权已分配";
+      feedback.value = "授权已分配，并已实时刷新列表";
     } else {
       await adminApi.revokeGrant(payload);
       removeSnapshot(payload);
-      feedback.value = "授权已撤销";
+      feedback.value = "授权已撤销，并已实时刷新列表";
     }
     ElMessage.success(feedback.value);
     await refreshPreview();
@@ -166,11 +186,11 @@ const submitBatch = async (mode: "assign" | "revoke") => {
     if (mode === "assign") {
       await adminApi.assignGrantBatch(grants);
       grants.forEach(upsertSnapshot);
-      feedback.value = `已批量分配 ${grants.length} 条授权`;
+      feedback.value = `已批量分配 ${grants.length} 条授权，并实时刷新列表`;
     } else {
       await adminApi.revokeGrantBatch(grants);
       grants.forEach(removeSnapshot);
-      feedback.value = `已批量撤销 ${grants.length} 条授权`;
+      feedback.value = `已批量撤销 ${grants.length} 条授权，并实时刷新列表`;
     }
     ElMessage.success(feedback.value);
     await refreshPreview();
@@ -178,6 +198,13 @@ const submitBatch = async (mode: "assign" | "revoke") => {
     handleError(error);
   }
 };
+
+watch(
+  () => form.teacherId,
+  async () => {
+    await refreshPreview();
+  }
+);
 </script>
 
 <template>
@@ -191,18 +218,7 @@ const submitBatch = async (mode: "assign" | "revoke") => {
 
     <el-form label-position="top">
       <el-row :gutter="12">
-        <el-col :xs="24" :md="12">
-          <el-form-item label="管理员Key">
-            <el-input
-              :model-value="session.state.adminKey"
-              placeholder="输入管理员Key"
-              show-password
-              @update:model-value="session.setAdminKey"
-              clearable
-            />
-          </el-form-item>
-        </el-col>
-        <el-col :xs="24" :md="12">
+        <el-col :xs="24">
           <el-form-item label="教师ID">
             <el-input v-model="form.teacherId" placeholder="输入教师ID（如 T-1）" clearable />
           </el-form-item>
