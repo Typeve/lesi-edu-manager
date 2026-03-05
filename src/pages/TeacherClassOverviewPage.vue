@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { ApiError } from "../services/http";
 import { teacherApi } from "../services/teacher";
 import type { TeacherStudentItem } from "../types/teacher";
@@ -10,15 +10,39 @@ interface AnomalyStudentRow extends TeacherStudentItem {
 }
 
 const router = useRouter();
+const route = useRoute();
+const DEFAULT_THRESHOLD_DAYS = 30;
 
 const options = reactive({
-  thresholdDays: 30,
+  thresholdDays: DEFAULT_THRESHOLD_DAYS,
   classId: ""
 });
 
 const loading = ref(false);
 const errorText = ref("");
 const students = ref<TeacherStudentItem[]>([]);
+const syncingFromRoute = ref(false);
+
+const readStringQuery = (value: unknown): string => (typeof value === "string" ? value : "");
+const readPositiveIntQuery = (value: unknown, fallback: number): number => {
+  if (typeof value !== "string" || !value.trim()) return fallback;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const applyQueryToOptions = () => {
+  syncingFromRoute.value = true;
+  options.classId = readStringQuery(route.query.classId);
+  options.thresholdDays = readPositiveIntQuery(route.query.thresholdDays, DEFAULT_THRESHOLD_DAYS);
+  syncingFromRoute.value = false;
+};
+
+const buildQueryFromOptions = (): Record<string, string> => {
+  const query: Record<string, string> = {};
+  if (options.classId) query.classId = options.classId;
+  if (options.thresholdDays !== DEFAULT_THRESHOLD_DAYS) query.thresholdDays = String(options.thresholdDays);
+  return query;
+};
 
 const load = async () => {
   loading.value = true;
@@ -38,7 +62,14 @@ const load = async () => {
   }
 };
 
-watch(() => [options.classId], load, { immediate: true });
+watch(
+  () => route.query,
+  async () => {
+    applyQueryToOptions();
+    await load();
+  },
+  { immediate: true }
+);
 
 const rows = computed<AnomalyStudentRow[]>(() =>
   students.value.map((item) => ({
@@ -68,7 +99,16 @@ const getAnomalyText = (row: AnomalyStudentRow) => {
   return texts.join(" / ");
 };
 
-const goDetail = (studentId: number) => router.push(`/teacher/students/${studentId}`);
+watch(
+  () => [options.classId, options.thresholdDays],
+  async () => {
+    if (syncingFromRoute.value) return;
+    const query = buildQueryFromOptions();
+    const nextFullPath = router.resolve({ path: route.path, query }).fullPath;
+    if (nextFullPath === route.fullPath) return;
+    await router.replace({ query });
+  }
+);
 </script>
 
 <template>
@@ -84,7 +124,7 @@ const goDetail = (studentId: number) => router.push(`/teacher/students/${student
       <el-row :gutter="12">
         <el-col :xs="24" :md="8">
           <el-form-item label="班级ID">
-            <el-input v-model="options.classId" placeholder="班级ID（可选）" clearable />
+            <el-input v-model="options.classId" inputmode="numeric" placeholder="班级ID（可选）…" clearable />
           </el-form-item>
         </el-col>
         <el-col :xs="24" :md="8">
@@ -113,7 +153,12 @@ const goDetail = (studentId: number) => router.push(`/teacher/students/${student
         </el-table-column>
         <el-table-column label="操作" min-width="120" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="goDetail(row.studentId)">查看详情</el-button>
+            <RouterLink
+              :to="`/teacher/students/${row.studentId}`"
+              class="text-sm font-medium text-blue-600 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+            >
+              查看详情
+            </RouterLink>
           </template>
         </el-table-column>
       </el-table>

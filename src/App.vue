@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 
 interface NavItem {
   path: string;
   label: string;
 }
 
-const router = useRouter();
 const route = useRoute();
 
 const navItems: readonly NavItem[] = [
@@ -31,12 +30,10 @@ const activePath = computed(() => {
 const isPublicRoute = computed(() => route.meta.requiresAuth === false);
 const activeLabel = computed(() => navItems.find((item) => item.path === activePath.value)?.label ?? "工作台");
 
-const onSelect = (path: string) => {
-  router.push(path);
-};
 </script>
 
 <template>
+  <a v-if="!isPublicRoute" href="#main-content" class="skip-link">跳转到主内容</a>
   <RouterView v-if="isPublicRoute" />
 
   <el-container v-else class="app-layout">
@@ -46,11 +43,17 @@ const onSelect = (path: string) => {
         <h1 class="app-layout__brand-title">管理端 / 教师端</h1>
       </div>
       <el-scrollbar class="app-layout__menu-scroll">
-        <el-menu :default-active="activePath" class="app-layout__menu" @select="onSelect">
-          <el-menu-item v-for="item in navItems" :key="item.path" :index="item.path">
+        <nav aria-label="主导航" class="app-layout__nav">
+          <RouterLink
+            v-for="item in navItems"
+            :key="item.path"
+            :to="item.path"
+            class="app-layout__nav-link"
+            :class="{ 'is-active': activePath === item.path }"
+          >
             {{ item.label }}
-          </el-menu-item>
-        </el-menu>
+          </RouterLink>
+        </nav>
       </el-scrollbar>
     </el-aside>
 
@@ -58,7 +61,7 @@ const onSelect = (path: string) => {
       <el-header class="app-layout__header">
         <h2 class="app-layout__header-title">{{ activeLabel }}</h2>
       </el-header>
-      <el-main class="app-layout__main">
+      <el-main id="main-content" tabindex="-1" class="app-layout__main">
         <RouterView />
       </el-main>
     </el-container>
@@ -66,6 +69,22 @@ const onSelect = (path: string) => {
 </template>
 
 <style scoped>
+.skip-link {
+  position: absolute;
+  left: 16px;
+  top: -48px;
+  z-index: 1000;
+  border-radius: 8px;
+  background-color: var(--el-color-primary);
+  color: #fff;
+  padding: 8px 12px;
+  text-decoration: none;
+}
+
+.skip-link:focus-visible {
+  top: 12px;
+}
+
 .app-layout {
   min-height: 100vh;
 }
@@ -98,22 +117,32 @@ const onSelect = (path: string) => {
   height: calc(100vh - 86px);
 }
 
-.app-layout__menu {
-  border-right: none;
+.app-layout__nav {
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  gap: 2px;
 }
 
-.app-layout__menu :deep(.el-menu-item),
-.app-layout__menu :deep(.el-sub-menu__title) {
+.app-layout__nav-link {
+  border-radius: 8px;
   color: var(--el-text-color-primary);
+  text-decoration: none;
+  padding: 10px 12px;
+  line-height: 20px;
 }
 
-.app-layout__menu :deep(.el-menu-item:hover),
-.app-layout__menu :deep(.el-sub-menu__title:hover) {
+.app-layout__nav-link:hover {
   color: var(--el-color-primary);
   background-color: var(--el-color-primary-light-9);
 }
 
-.app-layout__menu :deep(.el-menu-item.is-active) {
+.app-layout__nav-link:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
+
+.app-layout__nav-link.is-active {
   color: var(--el-color-primary);
   background-color: var(--el-color-primary-light-9);
   font-weight: 600;

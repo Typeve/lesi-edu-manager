@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { adminApi, type DashboardCockpitResponse, type DashboardDimension } from "../services/admin";
 import { ApiError } from "../services/http";
 
@@ -11,6 +12,9 @@ interface TrendRow {
   taskCompletedStudentsCount: number;
   activityParticipatedStudentsCount: number;
 }
+
+const route = useRoute();
+const router = useRouter();
 
 const filters = reactive({
   dimension: "class" as DashboardDimension,
@@ -25,6 +29,7 @@ const filters = reactive({
 const loading = ref(false);
 const errorText = ref("");
 const data = ref<DashboardCockpitResponse | null>(null);
+const syncingFromRoute = ref(false);
 
 const overviewRows = computed(() => {
   if (!data.value) return [];
@@ -56,6 +61,36 @@ const toNumberOrUndefined = (raw: string): number | undefined => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 };
 
+const readStringQuery = (value: unknown): string => (typeof value === "string" ? value : "");
+const readDimensionQuery = (value: unknown): DashboardDimension => {
+  if (value === "major" || value === "college") return value;
+  return "class";
+};
+
+const applyQueryToFilters = () => {
+  syncingFromRoute.value = true;
+  filters.dimension = readDimensionQuery(route.query.dimension);
+  filters.schoolId = readStringQuery(route.query.schoolId);
+  filters.collegeId = readStringQuery(route.query.collegeId);
+  filters.majorId = readStringQuery(route.query.majorId);
+  filters.classId = readStringQuery(route.query.classId);
+  filters.startDate = readStringQuery(route.query.startDate);
+  filters.endDate = readStringQuery(route.query.endDate);
+  syncingFromRoute.value = false;
+};
+
+const buildQueryFromFilters = (): Record<string, string> => {
+  const query: Record<string, string> = {};
+  if (filters.dimension !== "class") query.dimension = filters.dimension;
+  if (filters.schoolId) query.schoolId = filters.schoolId;
+  if (filters.collegeId) query.collegeId = filters.collegeId;
+  if (filters.majorId) query.majorId = filters.majorId;
+  if (filters.classId) query.classId = filters.classId;
+  if (filters.startDate) query.startDate = filters.startDate;
+  if (filters.endDate) query.endDate = filters.endDate;
+  return query;
+};
+
 const load = async () => {
   loading.value = true;
   errorText.value = "";
@@ -79,11 +114,23 @@ const load = async () => {
 };
 
 watch(
-  () => [filters.dimension, filters.schoolId, filters.collegeId, filters.majorId, filters.classId, filters.startDate, filters.endDate],
+  () => route.query,
   async () => {
+    applyQueryToFilters();
     await load();
   },
   { immediate: true }
+);
+
+watch(
+  () => [filters.dimension, filters.schoolId, filters.collegeId, filters.majorId, filters.classId, filters.startDate, filters.endDate],
+  async () => {
+    if (syncingFromRoute.value) return;
+    const query = buildQueryFromFilters();
+    const nextFullPath = router.resolve({ path: route.path, query }).fullPath;
+    if (nextFullPath === route.fullPath) return;
+    await router.replace({ query });
+  }
 );
 </script>
 
@@ -117,10 +164,10 @@ watch(
             <el-date-picker v-model="filters.endDate" type="date" class="!w-full" value-format="YYYY-MM-DD" />
           </el-form-item>
         </el-col>
-        <el-col :xs="24" :md="6"><el-form-item label="schoolId"><el-input v-model="filters.schoolId" clearable /></el-form-item></el-col>
-        <el-col :xs="24" :md="6"><el-form-item label="collegeId"><el-input v-model="filters.collegeId" clearable /></el-form-item></el-col>
-        <el-col :xs="24" :md="6"><el-form-item label="majorId"><el-input v-model="filters.majorId" clearable /></el-form-item></el-col>
-        <el-col :xs="24" :md="6"><el-form-item label="classId"><el-input v-model="filters.classId" clearable /></el-form-item></el-col>
+        <el-col :xs="24" :md="6"><el-form-item label="schoolId"><el-input v-model="filters.schoolId" inputmode="numeric" clearable /></el-form-item></el-col>
+        <el-col :xs="24" :md="6"><el-form-item label="collegeId"><el-input v-model="filters.collegeId" inputmode="numeric" clearable /></el-form-item></el-col>
+        <el-col :xs="24" :md="6"><el-form-item label="majorId"><el-input v-model="filters.majorId" inputmode="numeric" clearable /></el-form-item></el-col>
+        <el-col :xs="24" :md="6"><el-form-item label="classId"><el-input v-model="filters.classId" inputmode="numeric" clearable /></el-form-item></el-col>
       </el-row>
     </el-form>
 

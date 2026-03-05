@@ -69,30 +69,38 @@ const submit = async () => {
       <p class="mt-1 text-sm text-slate-500">管理员 / 教师使用同一入口</p>
 
       <form class="mt-5 space-y-3" @submit.prevent="submit">
+        <label class="block text-sm text-slate-700" for="login-account">账号</label>
         <input
+          id="login-account"
           v-model="form.account"
+          name="account"
           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          placeholder="账号"
+          placeholder="请输入账号…"
+          spellcheck="false"
           autocomplete="username"
         />
+        <label class="block text-sm text-slate-700" for="login-password">密码</label>
         <input
+          id="login-password"
           v-model="form.password"
+          name="password"
           type="password"
           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          placeholder="密码"
+          placeholder="请输入密码…"
+          spellcheck="false"
           autocomplete="current-password"
         />
 
         <button
           :disabled="loading"
-          class="w-full rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+          class="w-full rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
           type="submit"
         >
-          {{ loading ? "登录中..." : "登录" }}
+          {{ loading ? "登录中…" : "登录" }}
         </button>
       </form>
 
-      <p v-if="errorText" class="mt-3 text-sm text-rose-600">{{ errorText }}</p>
+      <p v-if="errorText" class="mt-3 text-sm text-rose-600" role="status" aria-live="polite">{{ errorText }}</p>
     </section>
   </main>
 </template>

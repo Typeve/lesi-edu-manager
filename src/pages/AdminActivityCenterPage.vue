@@ -128,12 +128,12 @@ onMounted(async () => {
               </el-col>
               <el-col :span="12">
                 <el-form-item label="活动标题">
-                  <el-input v-model="form.title" placeholder="活动标题" />
+                  <el-input v-model="form.title" placeholder="活动标题…" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
                 <el-form-item label="负责人教师ID">
-                  <el-input v-model="form.ownerTeacherId" placeholder="负责人教师ID" />
+                  <el-input v-model="form.ownerTeacherId" placeholder="负责人教师ID…" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">

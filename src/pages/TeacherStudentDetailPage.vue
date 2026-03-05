@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import { ApiError } from "../services/http";
 import { teacherApi } from "../services/teacher";
 import type { TeacherStudentDetailResponse } from "../types/teacher";
 
 const route = useRoute();
-const router = useRouter();
 
 const loading = ref(true);
 const errorText = ref("");
@@ -36,7 +35,12 @@ onMounted(async () => {
     <template #header>
       <div class="flex items-center justify-between">
         <h2 class="text-xl font-bold text-slate-900">学生详情</h2>
-        <el-button @click="router.push('/teacher/students')">返回</el-button>
+        <RouterLink
+          to="/teacher/students"
+          class="text-sm font-medium text-blue-600 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+        >
+          返回
+        </RouterLink>
       </div>
     </template>
 

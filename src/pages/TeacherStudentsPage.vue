@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { reactive, ref, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { teacherApi } from "../services/teacher";
 import { ApiError } from "../services/http";
 import type { TeacherStudentItem } from "../types/teacher";
 
+const DEFAULT_PAGE = 1;
+
+const route = useRoute();
 const router = useRouter();
 
 const filters = reactive({
@@ -21,6 +24,38 @@ const loading = ref(false);
 const errorText = ref("");
 const items = ref<TeacherStudentItem[]>([]);
 const total = ref(0);
+const syncingFromRoute = ref(false);
+
+const readStringQuery = (value: unknown): string => (typeof value === "string" ? value : "");
+const readPositiveIntQuery = (value: unknown, fallback: number): number => {
+  if (typeof value !== "string" || !value.trim()) return fallback;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+};
+const readAssessmentStatusQuery = (value: unknown): string => (value === "done" || value === "pending" ? value : "");
+const readReportStatusQuery = (value: unknown): string => (value === "generated" || value === "pending" ? value : "");
+
+const applyQueryToFilters = () => {
+  syncingFromRoute.value = true;
+  filters.classId = readStringQuery(route.query.classId);
+  filters.majorId = readStringQuery(route.query.majorId);
+  filters.grade = readStringQuery(route.query.grade);
+  filters.assessmentStatus = readAssessmentStatusQuery(route.query.assessmentStatus);
+  filters.reportStatus = readReportStatusQuery(route.query.reportStatus);
+  filters.page = readPositiveIntQuery(route.query.page, DEFAULT_PAGE);
+  syncingFromRoute.value = false;
+};
+
+const buildQueryFromFilters = (): Record<string, string> => {
+  const query: Record<string, string> = {};
+  if (filters.classId) query.classId = filters.classId;
+  if (filters.majorId) query.majorId = filters.majorId;
+  if (filters.grade) query.grade = filters.grade;
+  if (filters.assessmentStatus) query.assessmentStatus = filters.assessmentStatus;
+  if (filters.reportStatus) query.reportStatus = filters.reportStatus;
+  if (filters.page !== DEFAULT_PAGE) query.page = String(filters.page);
+  return query;
+};
 
 const load = async () => {
   loading.value = true;
@@ -48,16 +83,24 @@ const load = async () => {
 };
 
 watch(
-  () => [filters.classId, filters.majorId, filters.grade, filters.assessmentStatus, filters.reportStatus, filters.page],
+  () => route.query,
   async () => {
+    applyQueryToFilters();
     await load();
   },
   { immediate: true }
 );
 
-const goDetail = (studentId: number) => {
-  router.push(`/teacher/students/${studentId}`);
-};
+watch(
+  () => [filters.classId, filters.majorId, filters.grade, filters.assessmentStatus, filters.reportStatus, filters.page],
+  async () => {
+    if (syncingFromRoute.value) return;
+    const query = buildQueryFromFilters();
+    const nextFullPath = router.resolve({ path: route.path, query }).fullPath;
+    if (nextFullPath === route.fullPath) return;
+    await router.replace({ query });
+  }
+);
 </script>
 
 <template>
@@ -73,22 +116,22 @@ const goDetail = (studentId: number) => {
       <el-row :gutter="12">
         <el-col :xs="24" :md="8">
           <el-form-item label="班级ID">
-            <el-input v-model="filters.classId" placeholder="班级ID" clearable />
+            <el-input v-model="filters.classId" inputmode="numeric" placeholder="班级ID…" clearable />
           </el-form-item>
         </el-col>
         <el-col :xs="24" :md="8">
           <el-form-item label="专业ID">
-            <el-input v-model="filters.majorId" placeholder="专业ID" clearable />
+            <el-input v-model="filters.majorId" inputmode="numeric" placeholder="专业ID…" clearable />
           </el-form-item>
         </el-col>
         <el-col :xs="24" :md="8">
           <el-form-item label="年级">
-            <el-input v-model="filters.grade" placeholder="年级" clearable />
+            <el-input v-model="filters.grade" inputmode="numeric" placeholder="年级…" clearable />
           </el-form-item>
         </el-col>
         <el-col :xs="24" :md="8">
           <el-form-item label="测评状态">
-            <el-select v-model="filters.assessmentStatus" class="w-full" placeholder="测评状态（全部）" clearable>
+            <el-select v-model="filters.assessmentStatus" class="w-full" placeholder="测评状态（全部）…" clearable>
               <el-option label="已完成" value="done" />
               <el-option label="未完成" value="pending" />
             </el-select>
@@ -96,7 +139,7 @@ const goDetail = (studentId: number) => {
         </el-col>
         <el-col :xs="24" :md="8">
           <el-form-item label="报告状态">
-            <el-select v-model="filters.reportStatus" class="w-full" placeholder="报告状态（全部）" clearable>
+            <el-select v-model="filters.reportStatus" class="w-full" placeholder="报告状态（全部）…" clearable>
               <el-option label="已生成" value="generated" />
               <el-option label="未生成" value="pending" />
             </el-select>
@@ -130,7 +173,12 @@ const goDetail = (studentId: number) => {
       </el-table-column>
       <el-table-column label="操作" min-width="120" fixed="right">
         <template #default="{ row }">
-          <el-button type="primary" size="small" @click="goDetail(row.studentId)">查看详情</el-button>
+          <RouterLink
+            :to="`/teacher/students/${row.studentId}`"
+            class="text-sm font-medium text-blue-600 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+          >
+            查看详情
+          </RouterLink>
         </template>
       </el-table-column>
       <template #empty>

@@ -220,7 +220,7 @@ watch(
       <el-row :gutter="12">
         <el-col :xs="24">
           <el-form-item label="教师ID">
-            <el-input v-model="form.teacherId" placeholder="输入教师ID（如 T-1）" clearable />
+            <el-input v-model="form.teacherId" placeholder="输入教师ID（如 T-1）…" clearable />
           </el-form-item>
         </el-col>
       </el-row>

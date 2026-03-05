@@ -1,18 +1,9 @@
 <script setup lang="ts">
-import { useRouter } from "vue-router";
+import { computed } from "vue";
 import { getDefaultRouteByRole, useSessionStore } from "../stores/session";
 
-const router = useRouter();
 const session = useSessionStore();
-
-const goHome = async () => {
-  if (!session.state.user) {
-    await router.replace("/login");
-    return;
-  }
-
-  await router.replace(getDefaultRouteByRole(session.state.user.role));
-};
+const homePath = computed(() => (session.state.user ? getDefaultRouteByRole(session.state.user.role) : "/login"));
 </script>
 
 <template>
@@ -21,8 +12,13 @@ const goHome = async () => {
     <p class="mt-2 text-sm text-slate-600">当前账号没有该页面访问权限，请联系管理员授权。</p>
 
     <div class="mt-5 flex justify-center gap-2">
-      <button class="rounded bg-slate-100 px-3 py-1.5 text-sm" @click="goHome">返回首页</button>
-      <button class="rounded bg-brand-500 px-3 py-1.5 text-sm text-white" @click="router.push('/login')">切换账号</button>
+      <RouterLink :to="homePath" class="rounded bg-slate-100 px-3 py-1.5 text-sm text-slate-900">返回首页</RouterLink>
+      <RouterLink
+        to="/login"
+        class="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+      >
+        切换账号
+      </RouterLink>
     </div>
   </section>
 </template>

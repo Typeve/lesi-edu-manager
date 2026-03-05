@@ -150,7 +150,7 @@ const resetTeacherPassword = async (teacherId: string) => {
               </el-col>
               <el-col :span="16">
                 <el-form-item label="学院名称">
-                  <el-input v-model="collegeForm.name" placeholder="学院名称" />
+                  <el-input v-model="collegeForm.name" placeholder="学院名称…" />
                 </el-form-item>
               </el-col>
             </el-row>
@@ -179,17 +179,17 @@ const resetTeacherPassword = async (teacherId: string) => {
             <el-row :gutter="8">
               <el-col :span="12">
                 <el-form-item label="姓名">
-                  <el-input v-model="teacherForm.name" placeholder="姓名" />
+                  <el-input v-model="teacherForm.name" placeholder="姓名…" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
                 <el-form-item label="账号">
-                  <el-input v-model="teacherForm.account" placeholder="账号" />
+                  <el-input v-model="teacherForm.account" placeholder="账号…" />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
                 <el-form-item label="密码">
-                  <el-input v-model="teacherForm.password" placeholder="密码" show-password />
+                  <el-input v-model="teacherForm.password" placeholder="密码…" show-password />
                 </el-form-item>
               </el-col>
               <el-col :span="12">
