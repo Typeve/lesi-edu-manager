@@ -33,17 +33,6 @@ const visibleActivities = computed(() => {
       </div>
     </template>
 
-    <el-form label-position="top">
-      <el-form-item label="教师ID">
-        <el-input
-          :model-value="session.state.teacherId"
-          placeholder="输入教师ID（如 T-1）"
-          @update:model-value="session.setTeacherId"
-          clearable
-        />
-      </el-form-item>
-    </el-form>
-
     <el-table :data="visibleActivities" border>
       <el-table-column prop="activityId" label="ID" min-width="80" />
       <el-table-column prop="activityType" label="类型" min-width="100" />

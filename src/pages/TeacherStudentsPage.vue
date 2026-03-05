@@ -72,16 +72,6 @@ const goDetail = (studentId: number) => {
     <el-form label-position="top" class="mb-2">
       <el-row :gutter="12">
         <el-col :xs="24" :md="8">
-          <el-form-item label="教师ID">
-            <el-input
-              :model-value="session.state.teacherId"
-              placeholder="输入教师ID（如 T-1）"
-              @update:model-value="session.setTeacherId"
-              clearable
-            />
-          </el-form-item>
-        </el-col>
-        <el-col :xs="24" :md="8">
           <el-form-item label="班级ID">
             <el-input v-model="filters.classId" placeholder="班级ID" clearable />
           </el-form-item>
@@ -115,8 +105,7 @@ const goDetail = (studentId: number) => {
       </el-row>
     </el-form>
 
-    <el-alert v-if="!hasTeacherId" title="请先输入教师ID。" type="warning" show-icon :closable="false" />
-    <el-alert v-else-if="errorText" :title="errorText" type="error" show-icon :closable="false" />
+    <el-alert v-if="errorText" :title="errorText" type="error" show-icon :closable="false" />
 
     <el-table v-else :data="items" border class="mt-4" v-loading="loading">
       <el-table-column prop="studentNo" label="学号" min-width="140" />

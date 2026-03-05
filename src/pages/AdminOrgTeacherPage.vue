@@ -21,15 +21,6 @@ const handleError = (error: unknown) => {
   ElMessage.error(feedback.value);
 };
 
-const ensureAdminKey = () => {
-  if (!session.state.adminKey) {
-    feedback.value = "请先输入管理员Key";
-    ElMessage.warning(feedback.value);
-    return false;
-  }
-  return true;
-};
-
 const createCollege = async () => {
   try {
     const created = await adminApi.createCollege({
@@ -46,8 +37,6 @@ const createCollege = async () => {
 };
 
 const renameCollege = async (collegeId: number) => {
-  if (!ensureAdminKey()) return;
-
   try {
     const { value: nextName } = await ElMessageBox.prompt("请输入新学院名称", "学院改名", {
       confirmButtonText: "确定",
@@ -60,7 +49,7 @@ const renameCollege = async (collegeId: number) => {
       type: "warning"
     });
 
-    await adminApi.updateCollege(session.state.adminKey, collegeId, { name: nextName });
+    await adminApi.updateCollege(collegeId, { name: nextName });
     colleges.value = colleges.value.map((item) => (item.collegeId === collegeId ? { ...item, name: nextName } : item));
     feedback.value = "组织树更新成功（已重命名）";
     ElMessage.success(feedback.value);
@@ -70,13 +59,12 @@ const renameCollege = async (collegeId: number) => {
 };
 
 const removeCollege = async (collegeId: number) => {
-  if (!ensureAdminKey()) return;
   try {
     await ElMessageBox.confirm("确认删除该学院吗？此操作不可恢复。", "危险操作", {
       type: "warning"
     });
 
-    await adminApi.deleteCollege(session.state.adminKey, collegeId);
+    await adminApi.deleteCollege(collegeId);
     colleges.value = colleges.value.filter((item) => item.collegeId !== collegeId);
     feedback.value = "组织树更新成功（已删除）";
     ElMessage.success(feedback.value);
@@ -112,7 +100,7 @@ const toggleTeacherStatus = async (teacherId: string, status: "active" | "frozen
       type: "warning"
     });
 
-    await adminApi.updateTeacherStatus(session.state.adminKey, teacherId, nextStatus);
+    await adminApi.updateTeacherStatus(teacherId, nextStatus);
     teachers.value = teachers.value.map((item) => (item.teacherId === teacherId ? { ...item, status: nextStatus } : item));
     feedback.value = "教师账号操作已即时生效";
     ElMessage.success(feedback.value);
@@ -122,8 +110,6 @@ const toggleTeacherStatus = async (teacherId: string, status: "active" | "frozen
 };
 
 const resetTeacherPassword = async (teacherId: string) => {
-  if (!ensureAdminKey()) return;
-
   try {
     const { value: newPassword } = await ElMessageBox.prompt("请输入新密码（至少8位）", "重置密码", {
       confirmButtonText: "确定",
@@ -136,7 +122,7 @@ const resetTeacherPassword = async (teacherId: string) => {
       type: "warning"
     });
 
-    await adminApi.resetTeacherPassword(session.state.adminKey, teacherId, newPassword);
+    await adminApi.resetTeacherPassword(teacherId, newPassword);
     feedback.value = "已完成密码重置";
     ElMessage.success(feedback.value);
   } catch (error) {
@@ -150,18 +136,6 @@ const resetTeacherPassword = async (teacherId: string) => {
     <template #header>
       <h2 class="text-xl font-bold text-slate-900">管理员｜组织与教师账号管理</h2>
     </template>
-
-    <el-form label-position="top">
-      <el-form-item label="管理员 Key">
-        <el-input
-          :model-value="session.state.adminKey"
-          placeholder="输入管理员Key"
-          show-password
-          @update:model-value="session.setAdminKey"
-          clearable
-        />
-      </el-form-item>
-    </el-form>
 
     <el-row :gutter="12" class="mb-4">
       <el-col :xs="24" :md="12">

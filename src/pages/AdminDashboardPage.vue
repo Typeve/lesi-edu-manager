@@ -2,7 +2,6 @@
 import { computed, reactive, ref, watch } from "vue";
 import { adminApi, type DashboardCockpitResponse, type DashboardDimension } from "../services/admin";
 import { ApiError } from "../services/http";
-import { useSessionStore } from "../stores/session";
 
 interface TrendRow {
   date: string;
@@ -12,8 +11,6 @@ interface TrendRow {
   taskCompletedStudentsCount: number;
   activityParticipatedStudentsCount: number;
 }
-
-const session = useSessionStore();
 
 const filters = reactive({
   dimension: "class" as DashboardDimension,
@@ -101,17 +98,6 @@ watch(
 
     <el-form label-position="top">
       <el-row :gutter="12">
-        <el-col :xs="24" :md="6">
-          <el-form-item label="管理员Key">
-            <el-input
-              :model-value="session.state.adminKey"
-              placeholder="管理员Key"
-              show-password
-              @update:model-value="session.setAdminKey"
-              clearable
-            />
-          </el-form-item>
-        </el-col>
         <el-col :xs="24" :md="6">
           <el-form-item label="统计维度">
             <el-select v-model="filters.dimension" class="w-full">

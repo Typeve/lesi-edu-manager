@@ -102,7 +102,7 @@ const refreshPreview = async () => {
 
   loadingPreview.value = true;
   try {
-    const result = await teacherApi.getStudents(form.teacherId.trim(), { page: 1, pageSize: 20 });
+    const result = await teacherApi.getStudents({ page: 1, pageSize: 20 });
     previewItems.value = result.items;
     previewTotal.value = result.total;
   } catch {

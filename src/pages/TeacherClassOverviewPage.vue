@@ -83,16 +83,6 @@ const goDetail = (studentId: number) => router.push(`/teacher/students/${student
     <el-form label-position="top">
       <el-row :gutter="12">
         <el-col :xs="24" :md="8">
-          <el-form-item label="教师ID">
-            <el-input
-              :model-value="session.state.teacherId"
-              placeholder="输入教师ID（如 T-1）"
-              @update:model-value="session.setTeacherId"
-              clearable
-            />
-          </el-form-item>
-        </el-col>
-        <el-col :xs="24" :md="8">
           <el-form-item label="班级ID">
             <el-input v-model="options.classId" placeholder="班级ID（可选）" clearable />
           </el-form-item>
@@ -105,8 +95,7 @@ const goDetail = (studentId: number) => router.push(`/teacher/students/${student
       </el-row>
     </el-form>
 
-    <el-alert v-if="!hasTeacherId" title="请先输入教师ID。" type="warning" show-icon :closable="false" />
-    <el-alert v-else-if="errorText" :title="errorText" type="error" show-icon :closable="false" />
+    <el-alert v-if="errorText" :title="errorText" type="error" show-icon :closable="false" />
 
     <template v-else>
       <el-row :gutter="12" class="mb-4">

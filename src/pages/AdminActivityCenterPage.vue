@@ -37,15 +37,6 @@ const parseTimeline = () => {
     .filter((item) => item.key && item.at);
 };
 
-const ensureAdminKey = () => {
-  if (!session.state.adminKey) {
-    feedback.value = "请先输入管理员Key";
-    ElMessage.warning(feedback.value);
-    return false;
-  }
-  return true;
-};
-
 const syncSnapshot = () => {
   localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(activities.value));
 };
@@ -84,7 +75,7 @@ const publish = async () => {
       type: "warning"
     });
 
-    await adminApi.publishActivity(session.state.adminKey, {
+    await adminApi.publishActivity({
       activityType: form.activityType,
       title: form.title.trim(),
       scopeType: form.scopeType,
@@ -119,18 +110,6 @@ onMounted(async () => {
         <p class="text-sm text-slate-600">创建课程/竞赛/项目活动，配置范围和负责人，发布后同步到教师端预览。</p>
       </div>
     </template>
-
-    <el-form label-position="top">
-      <el-form-item label="管理员 Key">
-        <el-input
-          :model-value="session.state.adminKey"
-          placeholder="输入管理员Key"
-          show-password
-          @update:model-value="session.setAdminKey"
-          clearable
-        />
-      </el-form-item>
-    </el-form>
 
     <el-row :gutter="12" class="mb-4">
       <el-col :xs="24" :md="12">
