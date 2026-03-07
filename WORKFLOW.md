@@ -23,6 +23,22 @@ agent:
 codex:
   command: codex app-server
   read_timeout_ms: 30000
+release:
+  enabled: true
+  trigger_state: "Ready to Deploy"
+  deploying_state: "Deploying"
+  success_state: "Deployed"
+  failure_state: "Deploy Failed"
+  main_branch: "main"
+  verify_commands:
+    - pnpm install --frozen-lockfile
+    - pnpm run check
+    - pnpm run build
+  deploy_commands:
+    - ssh wxq 'mkdir -p /www/wwwroot/laoshi.guopinleida.com'
+    - rsync -az --delete --filter='P .user.ini' --filter='P .htaccess' --filter='P .well-known/' dist/ wxq:/www/wwwroot/laoshi.guopinleida.com/
+  healthcheck_commands:
+    - curl -fsS https://laoshi.guopinleida.com >/dev/null
 ---
 
 You are working on a Linear issue for the `lesi-edu-manager` repository.
@@ -44,7 +60,8 @@ Execution rules:
 - If missing environment, ambiguous requirements, or external dependencies block progress, explain the blocker clearly.
 - Leave the branch and workspace in a reviewable state.
 - Prepare the work for Human Review when complete.
-- Treat `Done` as approval for the finish/deploy stage, not as proof that deployment is already complete.
+- Do not directly move the issue into `Human Review`, `Ready to Deploy`, `Deploying`, or `Deployed`; Symphony orchestrators and release runners own those state transitions.
+- Treat `Ready to Deploy` as the approval state for the release runner, `Deploying` as the active release state, and `Deployed` as the successful terminal release state.
 
 Finish / deploy plan for this project:
 - Main branch: main
@@ -53,13 +70,12 @@ Finish / deploy plan for this project:
   - pnpm install --frozen-lockfile
   - pnpm run check
   - pnpm run build
-- Deploy host: 82.157.154.116
-- Deploy user: root
+- Deploy SSH target: wxq
 - Deploy target directory: /www/wwwroot/laoshi.guopinleida.com
 - Upload mode: rsync over ssh
 - Remote deploy commands:
-  - ssh root@82.157.154.116 'mkdir -p /www/wwwroot/laoshi.guopinleida.com'
-  - rsync -az --delete dist/ root@82.157.154.116:/www/wwwroot/laoshi.guopinleida.com/
+  - ssh wxq 'mkdir -p /www/wwwroot/laoshi.guopinleida.com'
+  - rsync -az --delete dist/ wxq:/www/wwwroot/laoshi.guopinleida.com/
 - Healthcheck commands:
   - curl -fsS https://laoshi.guopinleida.com >/dev/null
 - Success state after deploy: Deployed

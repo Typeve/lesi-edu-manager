@@ -38,19 +38,26 @@ Primary commands:
 Environment notes:
 
 - Database / external dependencies: No database dependency is expected for this frontend project.
-- Manual validation notes: Manual browser and UI validation is required before marking the issue `Done`.
+- Manual validation notes: Manual browser and UI validation is required before moving the issue to `Ready to Deploy`.
 
 ## Linear and Status Semantics
 
 - Linear is the source of truth for task state.
 - `Todo`, `In Progress`, and `Rework` are active execution states unless the project says otherwise.
 - `Human Review` means the coding phase is complete and waiting for human review.
-- `Done` means the issue is approved to enter finish/deploy.
-- `Done` does not mean deployment is already complete.
+- `Ready to Deploy` means human review is complete and release automation may take over.
+- `Deploying` means the release runner is actively merging, verifying, or deploying.
+- `Deployed` means the release finished successfully.
+
+## State Transition Ownership
+
+- Agents must not directly move issues into `Human Review`, `Ready to Deploy`, `Deploying`, or `Deployed`.
+- The coding orchestrator owns the controlled handoff into `Human Review`.
+- The release runner owns the transitions into `Ready to Deploy`, `Deploying`, and `Deployed`.
 
 ## Finish / Deploy Boundary
 
-After an issue reaches `Done`, it should move into a separate finish/deploy stage.
+After an issue reaches `Ready to Deploy`, it should move into the separate finish/deploy stage.
 That stage should handle merge, post-merge verification, and deployment according to project rules.
 
 Recommended finish/deploy sequence:
@@ -65,7 +72,6 @@ Recommended finish/deploy sequence:
 
 Deploy connection settings to fill before production use:
 
-- Host: `82.157.154.116`
-- User: `root`
+- SSH target: `wxq`
 - Target directory: `/www/wwwroot/laoshi.guopinleida.com`
 - Healthcheck: `curl -fsS https://laoshi.guopinleida.com >/dev/null`
