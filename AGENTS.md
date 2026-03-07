@@ -59,12 +59,13 @@ Recommended finish/deploy sequence:
 2. Merge the issue branch into `main`.
 3. Run post-merge verification commands on the main branch.
 4. Deploy from the Symphony machine to the remote host over SSH.
-5. Use rsync or another explicit upload step before running remote deploy commands.
-6. Treat unresolved deployment placeholders as blockers.
+5. Use `rsync --delete` to sync the contents of local `dist/` to the remote target directory.
+6. Run an HTTP healthcheck after sync completes.
+7. Treat unresolved deployment placeholders as blockers.
 
 Deploy connection settings to fill before production use:
 
 - Host: `82.157.154.116`
-- User: `TODO_FILL_DEPLOY_USER`
+- User: `root`
 - Target directory: `/www/wwwroot/laoshi.guopinleida.com`
-- Healthcheck: `TODO_FILL_DEPLOY_HEALTHCHECK`
+- Healthcheck: `curl -fsS https://laoshi.guopinleida.com >/dev/null`

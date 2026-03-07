@@ -54,14 +54,14 @@ Finish / deploy plan for this project:
   - pnpm run check
   - pnpm run build
 - Deploy host: 82.157.154.116
-- Deploy user: TODO_FILL_DEPLOY_USER
+- Deploy user: root
 - Deploy target directory: /www/wwwroot/laoshi.guopinleida.com
 - Upload mode: rsync over ssh
 - Remote deploy commands:
-  - TODO_FILL_REMOTE_DEPLOY_COMMAND_1
-  - TODO_FILL_REMOTE_DEPLOY_COMMAND_2
+  - ssh root@82.157.154.116 'mkdir -p /www/wwwroot/laoshi.guopinleida.com'
+  - rsync -az --delete dist/ root@82.157.154.116:/www/wwwroot/laoshi.guopinleida.com/
 - Healthcheck commands:
-  - TODO_FILL_HEALTHCHECK_COMMAND_1
+  - curl -fsS https://laoshi.guopinleida.com >/dev/null
 - Success state after deploy: Deployed
 - Failure state after deploy: Deploy Failed
 
