@@ -66,5 +66,5 @@ Deploy connection settings to fill before production use:
 
 - Host: `82.157.154.116`
 - User: `TODO_FILL_DEPLOY_USER`
-- Target directory: ``
+- Target directory: `/www/wwwroot/laoshi.guopinleida.com`
 - Healthcheck: `TODO_FILL_DEPLOY_HEALTHCHECK`
