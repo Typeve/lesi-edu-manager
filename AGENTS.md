@@ -26,6 +26,14 @@ For implementation work, also use:
 - Do not make unrelated refactors.
 - Prefer project checks with `pnpm`.
 - Verify changes with the project validation commands before claiming completion.
+- Do not treat GitHub / PR / push as completion requirements for the coding phase.
+
+## Workpad Contract
+
+- Maintain exactly one persistent Linear comment headed `## Codex Workpad`.
+- Use that workpad as the single source of truth for progress during the coding phase.
+- Update the same workpad in place for plan, validation, blockers, and handoff.
+- Do not create extra progress or summary comments when the workpad can be updated instead.
 
 ## Project Validation
 
@@ -51,11 +59,13 @@ Environment notes:
 
 ## State Transition Ownership
 
-- Agents must not directly move issues into `Human Review`, `Ready to Deploy`, `Deploying`, or `Deployed`.
-- The coding orchestrator owns the controlled handoff into `Human Review`.
+- Agents may move an issue into `Human Review` only after the issue branch is clean, changes are committed, validation is complete, and the `## Codex Workpad` handoff is up to date.
+- Agents must not directly move issues into `Ready to Deploy`, `Deploying`, or `Deployed`.
 - The release runner owns the transitions into `Ready to Deploy`, `Deploying`, and `Deployed`.
 
 ## Finish / Deploy Boundary
+
+- GitHub / PR / push are not part of this workflow. The coding phase ends with a clean local issue branch and an updated workpad, not with a remote PR.
 
 After an issue reaches `Ready to Deploy`, it should move into the separate finish/deploy stage.
 That stage should handle merge, post-merge verification, and deployment according to project rules.

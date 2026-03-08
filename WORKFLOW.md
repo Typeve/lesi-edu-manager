@@ -54,13 +54,17 @@ Repository facts:
 
 Execution rules:
 - Linear is the source of truth for issue state.
+- Find or create a single persistent Linear comment headed `## Codex Workpad`, and keep that one comment updated in place throughout the coding phase.
+- Use the workpad comment for plan, acceptance criteria, validation notes, blockers, and handoff. Do not create extra progress or summary comments when the workpad can be updated instead.
 - Make the smallest effective change that resolves the issue.
 - Read the existing implementation before changing structure.
 - Do not make unrelated refactors.
-- If missing environment, ambiguous requirements, or external dependencies block progress, explain the blocker clearly.
-- Leave the branch and workspace in a reviewable state.
-- Prepare the work for Human Review when complete.
-- Do not directly move the issue into `Human Review`, `Ready to Deploy`, `Deploying`, or `Deployed`; Symphony orchestrators and release runners own those state transitions.
+- Work only on the issue delivery branch, never on `main`.
+- GitHub / PR / push are not part of this workflow and are not completion requirements. Do not wait on remote publishing before finishing the coding phase.
+- If missing environment, ambiguous requirements, or external dependencies block progress, explain the blocker clearly in the workpad.
+- The coding phase is complete when the issue branch contains the required committed changes, the workspace is clean, validation has been run, and the workpad is updated for handoff.
+- Once those conditions are satisfied, move the issue to `Human Review`.
+- Do not directly move the issue into `Ready to Deploy`, `Deploying`, or `Deployed`; the release runner owns those release-stage transitions.
 - Treat `Ready to Deploy` as the approval state for the release runner, `Deploying` as the active release state, and `Deployed` as the successful terminal release state.
 
 Finish / deploy plan for this project:
