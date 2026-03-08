@@ -1,4 +1,6 @@
 ---
+polling:
+  interval_ms: 5000
 tracker:
   kind: linear
   api_key: $LINEAR_API_KEY
